@@ -1,0 +1,15 @@
+{
+  "launcherVer": 1,
+  "launcherUrl": "https://github.com/ThornyDevilStudios/thornyx-launcher/releases/download/beta/launcher.exe",
+  "games": [
+    {
+      "name": "Noob Night Shift",
+      "startCmd": "start Noob_Shift.exe",
+      "clientVer": 1,
+      "clientUrl": "https://github.com/ThornyDevilStudios/noob-night-shift/releases/download/prototype/prototype_0.0.0.1_build_a000.zip",
+      "patchUrls": [],
+      "maintenance": false,
+      "voicePacks": []
+    }
+  ]
+}
