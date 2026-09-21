@@ -11,5 +11,23 @@
       "maintenance": false,
       "voicePacks": []
     }
+    {
+      "name": "ChernoPaw",
+      "startCmd": "start Cherno_Paw.exe",
+      "clientVer": 1,
+      "clientUrl": "https://github.com/ThornyDevilStudios/chernow_paw/releases/download/stable_1.0.0/Cherno.Paw.zip",
+      "patchUrls": [],
+      "maintenance": false,
+      "voicePacks": []
+    }
+    {
+      "name": "FinnVStheEvilBroccoli",
+      "startCmd": "start Pulse_GameJam_2025.exe",
+      "clientVer": 1,
+      "clientUrl": "https://github.com/ThornyDevilStudios/finn-vs-the-evil-broccoli/releases/download/stable_1.0.0/Pulse_GameJam_2025.zip",
+      "patchUrls": [],
+      "maintenance": false,
+      "voicePacks": []
+    }
   ]
 }
