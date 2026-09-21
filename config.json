@@ -1,6 +1,6 @@
 {
-  "launcherVer": 1,
-  "launcherUrl": "https://github.com/ThornyDevilStudios/thornyx-launcher/releases/download/beta/launcher.exe",
+  "launcherVer": 3,
+  "launcherUrl": "https://github.com/ThornyDevilStudios/thornyx-launcher/releases/download/beta_0.0.3/launcher.exe",
   "games": [
     {
       "name": "NoobNightShift",
