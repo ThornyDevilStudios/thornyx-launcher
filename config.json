@@ -10,7 +10,7 @@
       "patchUrls": [],
       "maintenance": false,
       "voicePacks": []
-    }
+    },
     {
       "name": "ChernoPaw",
       "startCmd": "start Cherno_Paw.exe",
@@ -19,7 +19,7 @@
       "patchUrls": [],
       "maintenance": false,
       "voicePacks": []
-    }
+    },
     {
       "name": "FinnVStheEvilBroccoli",
       "startCmd": "start Pulse_GameJam_2025.exe",
