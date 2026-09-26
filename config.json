@@ -6,7 +6,7 @@
       "name": "NoobNightShift",
       "startCmd": "start Noob_Shift.exe",
       "clientVer": 4,
-      "clientUrl": "https://github.com/ThornyDevilStudios/noob-night-shift/releases/download/prototype_a003/noob-night-shift.zip",
+      "clientUrl": "https://github.com/ThornyDevilStudios/noob-night-shift/releases/download/prototype_0.0.0.1_build_a003/Noob_Shift.zip",
       "patchUrls": [],
       "maintenance": false,
       "voicePacks": []
