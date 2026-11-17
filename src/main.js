@@ -204,9 +204,10 @@ async function getCatalogView() {
     }
   }));
 }
-async function download(url, destination, gameId) {
+async function download(url, destination, gameId, expectedSize = 0) {
   let offset = 0;
   try { offset = (await fsp.stat(destination)).size; } catch {}
+  if (expectedSize && offset >= expectedSize) return { success: true };
   const controller = new AbortController();
   downloadControllers.set(gameId, controller);
   try {
@@ -229,6 +230,8 @@ async function download(url, destination, gameId) {
       }
     });
     await pipeline(Readable.fromWeb(response.body), progress, fs.createWriteStream(destination, { flags: offset ? "a" : "w" }), { signal: controller.signal });
+    const finalSize = (await fsp.stat(destination)).size;
+    if (expectedSize && finalSize !== expectedSize) throw new Error("Download unvollständig: " + finalSize + " von " + expectedSize + " Bytes.");
     return { success: true };
   } catch (error) {
     if (pausedDownloads.has(gameId)) return { paused: true };
@@ -253,14 +256,15 @@ async function installGame(id) {
   const temp = path.join(root, `.tmp-${id}-${Date.now()}`);
   const target = installedPath(game);
   const backup = target + ".old";
-  const archive = path.join(root, `${id}-download${path.extname(asset.name)}`);
+  const safeVersion = String(latest.tag_name || "latest").replace(/[^A-Za-z0-9._-]/g, "_");
+  const archive = path.join(root, `${id}-${safeVersion}-download${path.extname(asset.name)}`);
   let movedOld = false;
   let keepArchive = false;
 
   await fsp.mkdir(temp, { recursive: true });
   try {
     send("app:status", { message: `Lade ${game.name} herunter …` });
-    const downloadResult = await download(asset.browser_download_url, archive, id);
+    const downloadResult = await download(asset.browser_download_url, archive, id, Number(asset.size || 0));
     if (downloadResult.paused) { keepArchive = true; await fsp.rm(temp, { recursive: true, force: true }); return { success: false, paused: true }; }
     if (downloadResult.cancelled) { await fsp.rm(temp, { recursive: true, force: true }); return { success: false, cancelled: true }; }
     if (asset.name.toLowerCase().endsWith(".zip")) {
@@ -331,8 +335,24 @@ function registerIpc() {
   ipcMain.handle("settings:choose-install-directory", async () => {
     const result = await dialog.showOpenDialog(win, { title: "Spielinstallationsordner auswählen", properties: ["openDirectory", "createDirectory"] });
     if (result.canceled || !result.filePaths[0]) return { canceled: true, installDirectory: userFiles() };
-    const chosen = path.resolve(result.filePaths[0]); writeSettings({ ...readSettings(), installDirectory: chosen });
-    fs.mkdirSync(chosen, { recursive: true }); return { canceled: false, installDirectory: chosen };
+    const previous = userFiles();
+    const chosen = path.resolve(result.filePaths[0]);
+    if (chosen === previous) return { canceled: false, installDirectory: previous };
+    const relative = path.relative(previous, chosen);
+    if (relative && !relative.startsWith("..") && !path.isAbsolute(relative)) throw new Error("Der neue Installationsordner darf nicht innerhalb des bisherigen Spieleordners liegen.");
+    fs.mkdirSync(chosen, { recursive: true });
+    for (const entry of await fsp.readdir(previous, { withFileTypes: true })) {
+      if (!entry.isDirectory() || entry.name.startsWith(".tmp-") || entry.name.endsWith(".old")) continue;
+      const source = path.join(previous, entry.name);
+      if (!fs.existsSync(path.join(source, ".thornyx-install.json"))) continue;
+      const destination = path.join(chosen, entry.name);
+      if (!fs.existsSync(destination)) {
+        await fsp.cp(source, destination, { recursive: true, errorOnExist: true });
+        await fsp.rm(source, { recursive: true, force: true });
+      }
+    }
+    writeSettings({ ...readSettings(), installDirectory: chosen });
+    return { canceled: false, installDirectory: chosen };
   });
   ipcMain.handle("catalog:get", getCatalogView);
   ipcMain.handle("updates:check", getCatalogView);
