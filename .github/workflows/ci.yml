@@ -17,9 +17,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
       - name: Install dependencies
         run: npm install
-      - name: Validate catalog
+      - name: Validate configuration and catalog
         run: npm test
       - name: Check JavaScript syntax
         shell: pwsh
@@ -27,7 +28,8 @@ jobs:
           node --check src/main.js
           node --check src/preload.js
           node --check src/renderer.js
-      - name: Build Windows installer
+          node --check electron-builder.config.cjs
+      - name: Build Windows installer (no publishing)
         run: npm run dist
       - uses: actions/upload-artifact@v4
         with:
