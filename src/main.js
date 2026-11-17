@@ -6,6 +6,7 @@ const { pipeline } = require("node:stream/promises");
 const { Readable, Transform } = require("node:stream");
 const extract = require("extract-zip");
 const { autoUpdater } = require("electron-updater");
+const { pathToFileURL } = require("node:url");
 const provenance = require("./provenance");
 
 let win;
@@ -56,7 +57,9 @@ function validateGame(game) {
     heroImage: safeHttpUrl(game.heroImage),
     itchUrl: safeHttpUrl(game.itchUrl),
     mods: Boolean(game.mods),
-    platform: ["windows", "linux", "macos", "auto"].includes(game.platform) ? game.platform : "auto"
+    platform: ["windows", "linux", "macos", "auto"].includes(game.platform) ? game.platform : "auto",
+    platformAssets: Object.fromEntries(["windows", "linux", "macos"].filter(key => typeof game.platformAssets?.[key] === "string").map(key => [key, game.platformAssets[key].slice(0, 120)])),
+    platformExecutables: Object.fromEntries(["windows", "linux", "macos"].filter(key => typeof game.platformExecutables?.[key] === "string").map(key => [key, game.platformExecutables[key].slice(0, 240)]))
   };
 }
 
@@ -102,27 +105,44 @@ function readInstalledVersion(id) {
     return JSON.parse(fs.readFileSync(path.join(installedPath({ id }), ".thornyx-install.json"), "utf8")).version || "";
   } catch { return ""; }
 }
+function metadataImage(root, value) {
+  const remote = safeHttpUrl(value);
+  if (remote) return remote;
+  if (typeof value !== "string" || !value.trim()) return "";
+  const candidate = path.resolve(root, value);
+  if (candidate === root || !candidate.startsWith(root + path.sep)) return "";
+  try { return fs.statSync(candidate).isFile() ? pathToFileURL(candidate).href : ""; } catch { return ""; }
+}
 function readPackagedMetadata(game) {
   const root = installedPath(game);
   for (const name of ["thornyx-game.json", "game.json", "metadata.json"]) {
     try {
       const data = JSON.parse(fs.readFileSync(path.join(root, name), "utf8"));
+      const screenshots = Array.isArray(data.screenshots) ? data.screenshots.slice(0, 8).map(value => metadataImage(root, value)).filter(Boolean) : [];
       return {
         name: typeof data.title === "string" ? data.title.slice(0, 80) : game.name,
         description: typeof data.description === "string" ? data.description.slice(0, 1000) : game.description,
         genre: typeof data.genre === "string" ? data.genre.slice(0, 80) : game.genre,
         developer: typeof data.developer === "string" ? data.developer.slice(0, 80) : game.developer,
-        cover: safeHttpUrl(data.cover || data.coverUrl) || game.cover,
-        heroImage: safeHttpUrl(data.heroImage || data.background) || game.heroImage,
+        cover: metadataImage(root, data.cover || data.coverUrl) || game.cover,
+        heroImage: metadataImage(root, data.heroImage || data.background) || game.heroImage,
+        screenshots,
         website: safeHttpUrl(data.website) || game.itchUrl
       };
     } catch {}
   }
-  return {};
+  const images = fs.readdirSync(root, { recursive: true }).filter(file => /\.(png|jpe?g|webp)$/i.test(String(file)));
+  const cover = images.find(file => /(^|[\\/])(cover|poster|thumbnail)\./i.test(String(file))) || images.find(file => /cover|poster|thumbnail/i.test(String(file)));
+  const hero = images.find(file => /(^|[\\/])(banner|background|hero)\./i.test(String(file))) || images.find(file => /banner|background|hero/i.test(String(file)));
+  return { cover: cover ? metadataImage(root, String(cover)) : game.cover, heroImage: hero ? metadataImage(root, String(hero)) : game.heroImage };
 }
+
+function platformKey() { return process.platform === "win32" ? "windows" : process.platform === "darwin" ? "macos" : "linux"; }
+function releaseAssetPattern(game) { return game.platformAssets?.[platformKey()] || game.assetPattern; }
 function releaseInfo(game, releases) {
   const latest = releases[0];
-  const asset = latest?.assets?.find(a => a.name.toLowerCase().includes(game.assetPattern.toLowerCase()));
+  const pattern = releaseAssetPattern(game);
+  const asset = latest?.assets?.find(a => a.name.toLowerCase().includes(pattern.toLowerCase()));
   return {
     version: latest?.tag_name || "—",
     name: latest?.name || latest?.tag_name || "Noch kein Release",
@@ -171,8 +191,9 @@ async function installGame(id) {
   const releases = await getReleases(game);
   const latest = releases[0];
   if (!latest) throw new Error("Für dieses Spiel wurde kein passendes Release gefunden.");
-  const asset = latest.assets.find(a => a.name.toLowerCase().includes(game.assetPattern.toLowerCase()));
-  if (!asset) throw new Error(`Kein Release-Asset passend zu „${game.assetPattern}“ gefunden.`);
+  const pattern = releaseAssetPattern(game);
+  const asset = latest.assets.find(a => a.name.toLowerCase().includes(pattern.toLowerCase()));
+  if (!asset) throw new Error("Kein Release-Asset passend zu „" + pattern + "“ für " + platformKey() + " gefunden.");
 
   const root = userFiles();
   const temp = path.join(root, `.tmp-${id}-${Date.now()}`);
@@ -218,19 +239,21 @@ async function installGame(id) {
 }
 function resolveExecutable(game) {
   const root = path.resolve(installedPath(game));
-  if (game.executable) {
-    const candidate = path.resolve(root, game.executable);
+  const configuredExecutable = game.platformExecutables?.[platformKey()] || game.executable;
+  if (configuredExecutable) {
+    const candidate = path.resolve(root, configuredExecutable);
     if (candidate !== root && !candidate.startsWith(root + path.sep)) throw new Error("Der Startpfad liegt außerhalb des Installationsordners.");
     if (!fs.existsSync(candidate)) throw new Error("Die konfigurierte Startdatei wurde nicht gefunden.");
     return candidate;
   }
   const files = fs.readdirSync(root, { recursive: true });
-  const wanted = process.platform === "win32" ? [".exe"] : process.platform === "darwin" ? [".app", ".command"] : [".x86_64", ".x86", ".sh", ""];
+  const wanted = process.platform === "win32" ? [".exe"] : process.platform === "darwin" ? [".app", ".command"] : [".x86_64", ".x86", ".sh"];
   const match = files.find(file => {
     const value = String(file).toLowerCase();
     return wanted.some(ext => ext && value.endsWith(ext)) && !value.includes("unins");
   });
-  if (!match) throw new Error("Keine passende Startdatei gefunden. Bitte den relativen executable-Pfad konfigurieren.");
+  if (!match && process.platform === "linux") match = files.find(file => { const full = path.join(root, String(file)); try { const stat = fs.statSync(full); return stat.isFile() && (stat.mode & 0o111) !== 0 && !/\.(so|dll|txt|json|dat|pak)$/i.test(full); } catch { return false; } });
+  if (!match) throw new Error("Keine passende Startdatei gefunden. Bitte platformExecutables oder executable konfigurieren.");
   return path.join(root, match);
 }
 function registerIpc() {
