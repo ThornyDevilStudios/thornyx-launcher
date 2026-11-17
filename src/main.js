@@ -211,6 +211,8 @@ async function download(url, destination, gameId, expectedSize = 0) {
   const controller = new AbortController();
   downloadControllers.set(gameId, controller);
   try {
+    if (pausedDownloads.has(gameId)) return { paused: true };
+    if (cancelledDownloads.has(gameId)) return { cancelled: true };
     const headers = { "User-Agent": "Thornyx-Launcher" };
     if (offset) headers.Range = "bytes=" + offset + "-";
     let response = await fetch(url, { headers, signal: controller.signal, redirect: "follow" });
