@@ -13,7 +13,7 @@ const build = {
   ],
   win: { target: ["nsis"] },
   nsis: { oneClick: false, allowToChangeInstallationDirectory: true, createDesktopShortcut: true, createStartMenuShortcut: true },
-  linux: { target: ["AppImage", "deb"], category: "Game" },
+  linux: { target: ["AppImage", "deb"], category: "Game", maintainer: "ThornyDevil Studios <thornydevil.studios@gmail.com>", desktopName: "thornyx-launcher" },
   mac: { target: ["dmg", "zip"], category: "public.app-category.games" }
 };
 if (typeof config.updateRepository === "string" && /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(config.updateRepository)) {
