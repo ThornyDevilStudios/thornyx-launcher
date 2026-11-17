@@ -285,6 +285,8 @@ async function installGame(id) {
     } else {
       await fsp.copyFile(archive, path.join(temp, path.basename(asset.name)));
     }
+    if (pausedDownloads.has(id)) { keepArchive = true; await fsp.rm(temp, { recursive: true, force: true }); return { success: false, paused: true }; }
+    if (cancelledDownloads.has(id)) { await fsp.rm(temp, { recursive: true, force: true }); return { success: false, cancelled: true }; }
     await fsp.writeFile(path.join(temp, ".thornyx-install.json"), JSON.stringify({
       version: latest.tag_name,
       installedAt: new Date().toISOString()
@@ -325,7 +327,7 @@ function resolveExecutable(game) {
   }
   const files = fs.readdirSync(root, { recursive: true });
   const wanted = process.platform === "win32" ? [".exe"] : process.platform === "darwin" ? [".app", ".command"] : [".x86_64", ".x86", ".sh"];
-  const match = files.find(file => {
+  let match = files.find(file => {
     const value = String(file).toLowerCase();
     return wanted.some(ext => ext && value.endsWith(ext)) && !value.includes("unins");
   });
