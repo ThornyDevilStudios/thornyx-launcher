@@ -5,12 +5,12 @@ function savePrefs(value) { localStorage.setItem("thornyx-preferences", JSON.str
 function esc(value="") { return String(value).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 function formatSize(n) { return !n ? "" : n > 1024**3 ? (n/1024**3).toFixed(1)+" GB" : Math.round(n/1024**2)+" MB"; }
 const languageText = {
-  de: { "nav-library":"Startseite", "nav-installed":"Installiert", "nav-all":"Alle Spiele", "nav-add":"Spiel hinzufügen", "nav-refresh":"Nach Updates suchen", "nav-downloads":"Downloads", "nav-settings":"Einstellungen", "nav-about":"Über diesen Launcher", "search":"Spiel, Genre oder Entwickler suchen …", "settings-title":"Launcher-Einstellungen", "save-settings":"Einstellungen speichern", "mods-add":"ZIP-Mod installieren", "downloads-title":"Downloads", "add-title":"Spiel hinzufügen" },
-  en: { "nav-library":"Home", "nav-installed":"Installed", "nav-all":"All games", "nav-add":"Add game", "nav-refresh":"Check for updates", "nav-downloads":"Downloads", "nav-settings":"Settings", "nav-about":"About this launcher", "search":"Search game, genre or developer …", "settings-title":"Launcher settings", "save-settings":"Save settings", "mods-add":"Install ZIP mod", "downloads-title":"Downloads", "add-title":"Add a game" }
+  de: { "nav-library":"Startseite", "nav-installed":"Installiert", "nav-all":"Alle Spiele", "nav-add":"Spiel hinzufügen", "nav-refresh":"Nach Updates suchen", "nav-downloads":"Downloads", "nav-community":"Community", "nav-settings":"Einstellungen", "nav-about":"Über diesen Launcher", "search":"Spiel, Genre oder Entwickler suchen …", "settings-title":"Launcher-Einstellungen", "save-settings":"Einstellungen speichern", "mods-add":"ZIP-Mod installieren", "downloads-title":"Downloads", "add-title":"Spiel hinzufügen" },
+  en: { "nav-library":"Home", "nav-installed":"Installed", "nav-all":"All games", "nav-add":"Add game", "nav-refresh":"Check for updates", "nav-downloads":"Downloads", "nav-community":"Community", "nav-settings":"Settings", "nav-about":"About this launcher", "search":"Search game, genre or developer …", "settings-title":"Launcher settings", "save-settings":"Save settings", "mods-add":"Install ZIP mod", "downloads-title":"Downloads", "add-title":"Add a game" }
 };
 function applyLanguage() {
   const lang=prefs().language==="en"?"en":"de", dict=languageText[lang];
-  for(const id of ["nav-library","nav-installed","nav-all","nav-add","nav-refresh","nav-downloads","nav-settings","nav-about"]){const el=$(id);if(el){const span=el.querySelector("span");if(span)span.textContent=dict[id];}}
+  for(const id of ["nav-library","nav-installed","nav-all","nav-add","nav-refresh","nav-downloads","nav-community","nav-settings","nav-about"]){const el=$(id);if(el){const span=el.querySelector("span");if(span)span.textContent=dict[id];}}
   $("search").placeholder=dict.search;
   $("settings-title").textContent=dict["settings-title"];
   $("save-settings").textContent=dict["save-settings"];
@@ -32,6 +32,8 @@ function applyBranding() {
   $("hero-description").textContent=b.description||"Installieren, aktuell halten und direkt losspielen.";
   $("itch-link").textContent=(b.shortName||name)+" Website ↗"; $("itch-link").onclick=e=>{e.preventDefault();if(b.website)window.launcher.openExternal(b.website);};
   $("version").textContent=name.toUpperCase()+" · "+(launcherConfig.version||"");
+  $("nav-community").classList.toggle("hidden",!launcherConfig.communityUrl);
+  $("nav-community").onclick=()=>{if(launcherConfig.communityUrl)window.launcher.openExternal(launcherConfig.communityUrl);};
   if(b.logo){$("brand-mark").textContent="";$("brand-mark").style.backgroundImage="url('"+String(b.logo).replace(/['"\\]/g,"")+"')";}
   const prov=launcherConfig.provenance||{};
   $("about-content").innerHTML="<p><strong>"+esc(prov.notice||"Based on Thornyx Launcher, originally created by ThornyDevil Studios.")+"</strong></p><p>Originalprojekt: <a href='#' id='original-repo-link'>ThornyDevil Studios / thornyx-launcher</a></p>";
