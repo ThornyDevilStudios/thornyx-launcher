@@ -3,6 +3,8 @@ const { contextBridge, ipcRenderer } = require("electron");
 contextBridge.exposeInMainWorld("launcher", {
   getConfig: () => ipcRenderer.invoke("config:get"),
   getSettings: () => ipcRenderer.invoke("settings:get"),
+  saveSettings: values => ipcRenderer.invoke("settings:save", values),
+  openLogs: () => ipcRenderer.invoke("diagnostics:open-logs"),
   chooseInstallDirectory: () => ipcRenderer.invoke("settings:choose-install-directory"),
   repairGame: id => ipcRenderer.invoke("game:repair", id),
   openGameFolder: id => ipcRenderer.invoke("game:open-folder", id),
