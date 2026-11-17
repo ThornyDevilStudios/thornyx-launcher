@@ -13,7 +13,24 @@ let win;
 let launcherConfig = {};
 let catalog = { games: [], studio: { name: "Indie Games" } };
 let installQueue = Promise.resolve();
-function queueInstall(id) { const task = installQueue.then(() => installGame(id)); installQueue = task.catch(() => {}); return task; }
+const queuedGameIds = [];
+const downloadControllers = new Map();
+const pausedDownloads = new Set();
+const cancelledDownloads = new Set();
+function publishDownloadQueue() { send("download:queue", { queue: [...queuedGameIds], paused: [...pausedDownloads] }); }
+function queueInstall(id) {
+  if (!queuedGameIds.includes(id)) queuedGameIds.push(id);
+  publishDownloadQueue();
+  const task = installQueue.then(() => pausedDownloads.has(id) || cancelledDownloads.has(id) ? { paused: pausedDownloads.has(id), cancelled: cancelledDownloads.has(id) } : installGame(id));
+  installQueue = task.catch(() => {}).finally(() => {
+    const index = queuedGameIds.indexOf(id); if (index >= 0) queuedGameIds.splice(index, 1);
+    publishDownloadQueue();
+  });
+  return task;
+}
+function pauseGameDownload(id) { pausedDownloads.add(id); downloadControllers.get(id)?.abort(); publishDownloadQueue(); return { success: true }; }
+function resumeGameDownload(id) { pausedDownloads.delete(id); cancelledDownloads.delete(id); publishDownloadQueue(); return queueInstall(id); }
+function cancelGameDownload(id) { cancelledDownloads.add(id); pausedDownloads.delete(id); downloadControllers.get(id)?.abort(); publishDownloadQueue(); return { success: true }; }
 
 function resourceFile(name) {
   return app.isPackaged ? path.join(process.resourcesPath, name) : path.join(__dirname, "..", name);
@@ -178,19 +195,39 @@ async function getCatalogView() {
   }));
 }
 async function download(url, destination, gameId) {
-  const response = await fetch(url, { headers: { "User-Agent": "Thornyx-Launcher" } });
-  if (!response.ok || !response.body) throw new Error(`Download fehlgeschlagen: HTTP ${response.status}`);
-  const total = Number(response.headers.get("content-length") || 0);
-  let received = 0;
-  const progress = new Transform({
-    transform(chunk, _encoding, callback) {
-      received += chunk.length;
-      send("download:progress", { id: gameId, received, total, percent: total ? Math.round(received / total * 100) : 0 });
-      callback(null, chunk);
+  let offset = 0;
+  try { offset = (await fsp.stat(destination)).size; } catch {}
+  const controller = new AbortController();
+  downloadControllers.set(gameId, controller);
+  try {
+    let headers = offset ? { Range: "bytes=" + offset + "-" } : {};
+    let response = await fetch(url, { headers, signal: controller.signal, redirect: "follow", headers: { ...headers, "User-Agent": "Thornyx-Launcher" } });
+    if (offset && response.status !== 206) {
+      await fsp.rm(destination, { force: true });
+      offset = 0;
+      response = await fetch(url, { signal: controller.signal, headers: { "User-Agent": "Thornyx-Launcher" } });
     }
-  });
-  await pipeline(Readable.fromWeb(response.body), progress, fs.createWriteStream(destination));
+    if (!response.ok || !response.body) throw new Error("Download fehlgeschlagen: HTTP " + response.status);
+    const total = Number(response.headers.get("content-length") || 0) + offset;
+    let received = offset;
+    const progress = new Transform({
+      transform(chunk, _encoding, callback) {
+        received += chunk.length;
+        send("download:progress", { id: gameId, received, total, percent: total ? Math.round(received / total * 100) : 0 });
+        callback(null, chunk);
+      }
+    });
+    await pipeline(Readable.fromWeb(response.body), progress, fs.createWriteStream(destination, { flags: offset ? "a" : "w" }), { signal: controller.signal });
+    return { success: true };
+  } catch (error) {
+    if (pausedDownloads.has(gameId)) return { paused: true };
+    if (cancelledDownloads.has(gameId)) return { cancelled: true };
+    throw error;
+  } finally {
+    downloadControllers.delete(gameId);
+  }
 }
+
 async function installGame(id) {
   const game = catalog.games.find(g => g.id === id);
   if (!game) throw new Error("Spiel nicht gefunden.");
@@ -207,11 +244,14 @@ async function installGame(id) {
   const backup = target + ".old";
   const archive = path.join(root, `${id}-download${path.extname(asset.name)}`);
   let movedOld = false;
+  let keepArchive = false;
 
   await fsp.mkdir(temp, { recursive: true });
   try {
     send("app:status", { message: `Lade ${game.name} herunter …` });
-    await download(asset.browser_download_url, archive, id);
+    const downloadResult = await download(asset.browser_download_url, archive, id);
+    if (downloadResult.paused) { keepArchive = true; await fsp.rm(temp, { recursive: true, force: true }); return { success: false, paused: true }; }
+    if (downloadResult.cancelled) { await fsp.rm(temp, { recursive: true, force: true }); return { success: false, cancelled: true }; }
     if (asset.name.toLowerCase().endsWith(".zip")) {
       send("app:status", { message: `Entpacke ${game.name} …` });
       await extract(archive, { dir: temp });
@@ -238,9 +278,11 @@ async function installGame(id) {
     return { success: true, version: latest.tag_name };
   } catch (error) {
     await fsp.rm(temp, { recursive: true, force: true });
+    if (pausedDownloads.has(id)) { keepArchive = true; return { success: false, paused: true }; }
+    if (cancelledDownloads.has(id)) return { success: false, cancelled: true };
     throw error;
   } finally {
-    await fsp.rm(archive, { force: true });
+    if (!keepArchive) await fsp.rm(archive, { force: true });
   }
 }
 function resolveExecutable(game) {
@@ -274,6 +316,9 @@ function registerIpc() {
   ipcMain.handle("catalog:get", getCatalogView);
   ipcMain.handle("updates:check", getCatalogView);
   ipcMain.handle("game:install", async (_event, id) => queueInstall(id));
+  ipcMain.handle("download:pause", (_event, id) => pauseGameDownload(id));
+  ipcMain.handle("download:resume", async (_event, id) => resumeGameDownload(id));
+  ipcMain.handle("download:cancel", (_event, id) => cancelGameDownload(id));
   ipcMain.handle("game:repair", async (_event, id) => queueInstall(id));
   ipcMain.handle("game:open-folder", async (_event, id) => {
     const game = catalog.games.find(g => g.id === id);
