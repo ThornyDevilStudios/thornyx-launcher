@@ -61,7 +61,7 @@ npm test
 npm start
 ```
 
-Build a Windows installer locally without publishing:
+Build an installer for the current operating system locally without publishing:
 
 ```bash
 npm run dist
@@ -89,7 +89,7 @@ Use **Spiel hinzufügen** in the launcher or edit `catalog.json`. Each entry nee
 
 Release version, date and changelog are read automatically from GitHub. Release assets should be complete game packages (usually ZIP files containing the EXE and all required data files).
 
-Custom entries are stored locally in the current Windows user's application-data directory.
+Custom entries are stored locally in the current operating system user's application-data directory.
 
 ## Distribution and source privacy
 
