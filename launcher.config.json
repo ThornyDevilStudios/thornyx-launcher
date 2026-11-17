@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "branding": {
+    "name": "Thornyx Launcher",
+    "shortName": "THORNYX",
+    "subtitle": "GAME LAUNCHER",
+    "tagline": "Deine nächste Geschichte beginnt hier.",
+    "description": "Alle Games an einem Ort. Installieren, aktuell halten und direkt losspielen.",
+    "developerLabel": "THORNYDEVIL STUDIOS",
+    "website": "https://thornydevilstudios.itch.io/",
+    "logo": "",
+    "accentColor": "#c5f36b",
+    "backgroundColor": "#0b0d12"
+  },
+  "appId": "studio.thornydevil.thornyxlauncher",
+  "updateRepository": "ThornyDevilStudios/thornyx-launcher",
+  "catalogFile": "catalog.json"
+}
