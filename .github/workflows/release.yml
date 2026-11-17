@@ -18,7 +18,11 @@ jobs:
         with:
           node-version: 20
           cache: npm
-      - run: npm install
-      - run: npm run dist
+      - name: Install dependencies
+        run: npm install
+      - name: Validate configuration and catalog
+        run: npm test
+      - name: Build and publish Windows installer
+        run: npm run publish
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
