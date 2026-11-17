@@ -87,6 +87,8 @@ async function perform(id,action) {
     if(action==="main"){if(g.installed&&!g.updateAvailable)await window.launcher.launchGame(id);else{if(g.installed&&g.updateAvailable&&!confirm("Update für "+g.name+" jetzt installieren?"))return;busy.add(id);render();await window.launcher.installGame(id);await refresh();}}
     else if(action==="uninstall"){if(confirm(g.name+" wirklich deinstallieren?")){await window.launcher.uninstallGame(id);await refresh();}}
     else if(action==="mods")await window.launcher.openMods(id);
+    else if(action==="folder")await window.launcher.openGameFolder(id);
+    else if(action==="repair"){if(confirm(g.name+" erneut herunterladen und reparieren?")){busy.add(id);render();await window.launcher.repairGame(id);await refresh();}}
     else if(action==="notes"&&g.htmlUrl)await window.launcher.openExternal(g.htmlUrl);
     else if(action==="store"&&g.itchUrl)await window.launcher.openExternal(g.itchUrl);
   }catch(e){$("status").textContent=e.message;alert(e.message);}finally{busy.delete(id);render();}
@@ -100,9 +102,11 @@ function openGameDetail(id) {
   $("detail-title").textContent=g.name;
   $("detail-meta").textContent=[g.developer,g.genre,g.version].filter(Boolean).join(" · ");
   $("detail-description").textContent=g.description||"Für dieses Spiel liegt noch keine Beschreibung vor.";
+  $("detail-screenshots").replaceChildren(...(g.screenshots||[]).map(src=>{const img=document.createElement("img");img.src=src;img.alt="Screenshot von "+g.name;return img;}));
   $("detail-notes").textContent=g.body||"Keine Release-Notizen verfügbar.";
   $("detail-status").textContent=g.installed?(g.updateAvailable?"Update verfügbar":"Installiert · "+(g.installedVersion||"Version unbekannt")):"Noch nicht installiert";
   $("detail-actions").innerHTML='<button class="primary" data-action="main" data-id="'+esc(g.id)+'">'+(g.installed?(g.updateAvailable?"Update installieren":"Spielen"):"Installieren")+'</button>'+(g.installed?'<button class="secondary" data-action="uninstall" data-id="'+esc(g.id)+'">Deinstallieren</button>':"")+(g.mods&&g.installed?'<button class="secondary" data-action="mods" data-id="'+esc(g.id)+'">Mods-Ordner</button>':"")+(g.htmlUrl?'<button class="secondary" data-action="notes" data-id="'+esc(g.id)+'">Release auf GitHub</button>':"");
+  if(g.installed){const folder=document.createElement("button");folder.className="secondary";folder.textContent="Ordner öffnen";folder.onclick=()=>perform(g.id,"folder");const repair=document.createElement("button");repair.className="secondary";repair.textContent="Reparieren";repair.onclick=()=>perform(g.id,"repair");$("detail-actions").append(folder,repair);}
   $("detail-modal").classList.remove("hidden");
 }
 document.addEventListener("click",e=>{
