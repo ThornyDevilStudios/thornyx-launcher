@@ -1,5 +1,5 @@
 const $ = id => document.getElementById(id);
-let games = [], view = "all", busy = new Set(), launcherConfig = {}, layout = "medium", displayMode = "grid";
+let games = [], view = "all", busy = new Set(), launcherConfig = {}, layout = "medium", displayMode = "grid", downloadQueue = [], downloadProgress = {};
 const prefs = () => { try { return JSON.parse(localStorage.getItem("thornyx-preferences") || "{}"); } catch { return {}; } };
 function savePrefs(value) { localStorage.setItem("thornyx-preferences", JSON.stringify(value)); }
 function esc(value="") { return String(value).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
@@ -95,6 +95,7 @@ async function perform(id,action) {
 }
 $("games").addEventListener("click",e=>{const b=e.target.closest("[data-action]");if(b)perform(b.dataset.id,b.dataset.action);});
 
+async function renderDownloads() { const root=$("downloads-list");root.replaceChildren();if(!downloadQueue.length){const p=document.createElement("p");p.className="muted";p.textContent="Keine aktiven Downloads.";root.append(p);return;}for(const id of downloadQueue){const g=games.find(x=>x.id===id),row=document.createElement("div"),label=document.createElement("strong"),progress=document.createElement("span"),pause=document.createElement("button"),resume=document.createElement("button"),cancel=document.createElement("button");row.className="download-row";label.textContent=g?.name||id;const p=downloadProgress[id];progress.textContent=p?(p.percent+"%"):"Wartet";pause.className="secondary";pause.textContent="Pause";pause.onclick=()=>window.launcher.pauseDownload(id);resume.className="secondary";resume.textContent="Fortsetzen";resume.onclick=()=>window.launcher.resumeDownload(id);cancel.className="danger";cancel.textContent="Abbrechen";cancel.onclick=()=>window.launcher.cancelDownload(id);row.append(label,progress,pause,resume,cancel);root.append(row);}}
 async function openModsManager(id) {
   const g=games.find(x=>x.id===id); if(!g)return;
   $("mods-title").textContent="Mods · "+g.name;
@@ -144,12 +145,15 @@ $("save-settings").onclick=()=>{savePrefs({layout:$("setting-layout").value,view
 $("view-grid").onclick=()=>{displayMode="grid";render();};$("view-list").onclick=()=>{displayMode="list";render();};
 $("nav-about").onclick=()=>$("about-modal").classList.remove("hidden");
 $("close-modal").onclick=()=>$("add-modal").classList.add("hidden");$("close-about").onclick=()=>$("about-modal").classList.add("hidden");$("close-settings").onclick=()=>$("settings-modal").classList.add("hidden");
-["add-modal","about-modal","settings-modal","mods-modal"].forEach(id=>$(id).addEventListener("click",e=>{if(e.target.id===id)$(id).classList.add("hidden");}));
+["add-modal","about-modal","settings-modal","mods-modal","downloads-modal"].forEach(id=>$(id).addEventListener("click",e=>{if(e.target.id===id)$(id).classList.add("hidden");}));
 $("add-form").addEventListener("submit",async e=>{e.preventDefault();const d=new FormData(e.currentTarget),g=Object.fromEntries(d.entries());g.mods=d.has("mods");try{await window.launcher.addGame(g);e.currentTarget.reset();$("add-modal").classList.add("hidden");await refresh();}catch(err){alert(err.message);}});
 $("close-mods").onclick=()=>$("mods-modal").classList.add("hidden");
+$("nav-downloads").onclick=()=>{$("downloads-modal").classList.remove("hidden");renderDownloads();};
+$("close-downloads").onclick=()=>$("downloads-modal").classList.add("hidden");
 $("mods-add").onclick=async()=>{const id=$("mods-modal").dataset.gameId;try{const result=await window.launcher.installMod(id);if(!result.canceled)await refreshModsList(id);}catch(e){alert(e.message);}};
 $("mods-list").addEventListener("click",async e=>{const b=e.target.closest("[data-remove-mod]");if(!b)return;const id=$("mods-modal").dataset.gameId;if(confirm("Mod wirklich entfernen?")){try{await window.launcher.removeMod(id,b.dataset.removeMod);await refreshModsList(id);}catch(err){alert(err.message);}}});
-window.launcher.onProgress(d=>$("status").textContent="Download: "+(d.total?d.percent+"%":formatSize(d.received)));
+window.launcher.onProgress(d=>{$("status").textContent="Download: "+(d.total?d.percent+"%":formatSize(d.received));downloadProgress[d.id]=d;renderDownloads();});
+window.launcher.onQueue(d=>{downloadQueue=d.queue||[];renderDownloads();});
 window.launcher.onStatus(d=>$("status").textContent=d.message);
 window.launcher.onLauncherUpdate(async d=>{if(confirm("Eine neue Launcher-Version ("+d.version+") ist verfügbar. Jetzt herunterladen?")){try{await window.launcher.downloadLauncherUpdate();if(confirm("Update heruntergeladen. Launcher jetzt neu starten?"))window.launcher.installLauncherUpdate();}catch(e){alert(e.message);}}});
 (async()=>{try{launcherConfig=await window.launcher.getConfig();const p=prefs();displayMode=p.view||launcherConfig.library?.mediumView||"grid";applyBranding();await refresh();}catch(e){$("status").textContent="Konfiguration: "+e.message;}})();
