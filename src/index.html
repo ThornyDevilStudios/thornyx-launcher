@@ -3,46 +3,82 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data: https:;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data: https: file:;">
   <title>Thornyx Launcher</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <aside class="sidebar">
+  <aside class="sidebar" id="sidebar">
     <div class="brand"><div class="brand-mark" id="brand-mark">T</div><div><strong id="brand-name">THORNYX</strong><small id="brand-subtitle">GAME LAUNCHER</small></div></div>
     <div class="nav-label">LIBRARY</div>
-    <button class="nav active" id="nav-library">◈ <span>Alle Spiele</span></button>
+    <button class="nav active" id="nav-library">◈ <span>Startseite</span></button>
     <button class="nav" id="nav-installed">▣ <span>Installiert</span></button>
+    <button class="nav" id="nav-all">▤ <span>Alle Spiele</span></button>
+    <div class="installed-sidebar" id="installed-sidebar"><div class="nav-label">DEINE SPIELE</div><div id="installed-list"></div></div>
     <div class="sidebar-bottom">
       <div class="status-dot"></div><span id="connection-label">Verbinde mit GitHub …</span>
       <button class="nav" id="nav-add">＋ <span>Spiel hinzufügen</span></button>
       <button class="nav" id="nav-refresh">↻ <span>Nach Updates suchen</span></button>
+      <button class="nav" id="nav-downloads">⇩ <span>Downloads</span></button>
+      <button class="nav hidden" id="nav-community">◎ <span>Community</span></button>
+      <button class="nav" id="nav-settings">⚙ <span>Einstellungen</span></button>
       <button class="nav" id="nav-about">ⓘ <span>Über diesen Launcher</span></button>
-      <a class="sidebar-link" href="https://thornydevilstudios.itch.io/" id="itch-link">Website ↗</a>
+      <a class="sidebar-link" href="#" id="itch-link">Website ↗</a>
       <small class="version" id="version">THORNYX LAUNCHER · 1.1.0</small>
     </div>
   </aside>
   <main class="main">
-    <header class="topbar"><div><span class="eyebrow" id="page-eyebrow">GAME LIBRARY</span><h1 id="page-title">Deine Spiele</h1></div><div class="top-actions"><span class="pill"><i></i> RELEASES LIVE</span><button class="icon-button" id="refresh-top" title="Aktualisieren">↻</button></div></header>
-    <section class="hero"><div class="hero-copy"><span class="eyebrow">WELCOME TO THE ARCADE</span><h2 id="hero-tagline">Deine nächste<br><em>Geschichte</em> beginnt hier.</h2><p id="hero-description">Alle Games an einem Ort. Installieren, aktuell halten und direkt losspielen.</p></div><div class="hero-art"><div class="orb orb-one"></div><div class="orb orb-two"></div><div class="hero-symbol">T<span>×</span></div></div></section>
-    <div class="section-head"><div><span class="eyebrow">GAME LIBRARY</span><h2 id="section-title">Alle Spiele <span id="game-count">—</span></h2></div><div class="search-wrap">⌕ <input id="search" placeholder="Spiel suchen …" autocomplete="off"></div></div>
+    <header class="topbar"><div><span class="eyebrow" id="page-eyebrow">GAME LIBRARY</span><h1 id="page-title">Deine Spiele</h1></div><div class="top-actions"><span class="pill"><i></i> GITHUB RELEASES</span><button class="icon-button" id="refresh-top" title="Aktualisieren">↻</button></div></header>
+    <section class="hero" id="hero"><div class="hero-copy"><span class="eyebrow">WELCOME TO THE ARCADE</span><h2 id="hero-tagline">Deine nächste<br><em>Geschichte</em> beginnt hier.</h2><p id="hero-description">Alle Games an einem Ort. Installieren, aktuell halten und direkt losspielen.</p></div><div class="hero-art"><div class="orb orb-one"></div><div class="orb orb-two"></div><div class="hero-symbol">T<span>×</span></div></div></section>
+    <section id="home-sections" class="home-sections"></section>
+    <div class="section-head"><div><span class="eyebrow" id="section-eyebrow">GAME LIBRARY</span><h2 id="section-title">Alle Spiele <span id="game-count">—</span></h2></div>
+      <div class="library-tools"><div class="search-wrap">⌕ <input id="search" placeholder="Spiel, Genre oder Entwickler suchen …" autocomplete="off"></div>
+      <select id="genre-filter" aria-label="Genre filtern"><option value="">Alle Genres</option></select>
+      <select id="developer-filter" aria-label="Entwickler filtern"><option value="">Alle Entwickler</option></select>
+      <select id="sort-select" aria-label="Sortieren"><option value="name">Name A–Z</option><option value="newest">Neueste zuerst</option><option value="developer">Entwickler</option></select>
+      <div class="view-toggle" id="view-toggle"><button id="view-grid" class="active" title="Raster">▦</button><button id="view-list" title="Liste">☷</button></div></div>
+    </div>
     <div id="games" class="games-grid"><div class="loading">Lade Spielebibliothek …</div></div>
     <div id="empty" class="empty hidden">Keine Spiele gefunden.</div>
-    <footer><span id="status">Bereit.</span><span>BASED ON THORNYX LAUNCHER <b>·</b> ORIGINAL BY THORNYDEVIL STUDIOS</span></footer>
+    <footer><span id="status">Bereit.</span><span>BASED ON THORNYX LAUNCHER · ORIGINAL BY THORNYDEVIL STUDIOS</span></footer>
   </main>
-  <div class="modal hidden" id="add-modal"><div class="modal-card"><button class="close" id="close-modal">×</button><span class="eyebrow">CUSTOM LIBRARY</span><h2>Spiel hinzufügen</h2><p>Verknüpfe ein öffentliches GitHub-Release-Repository. Metadaten und Release-Notes werden automatisch geladen.</p>
+  <div class="modal hidden" id="add-modal"><div class="modal-card"><button class="close" id="close-modal">×</button><span class="eyebrow">CUSTOM LIBRARY</span><h2 id="add-title">Spiel hinzufügen</h2><p>Verknüpfe ein GitHub-Release-Repository. Release-Versionen und Changelogs werden automatisch abgerufen.</p>
     <form id="add-form">
       <label>Spielname<input name="name" required placeholder="Mein Indie Game"></label>
       <label>GitHub-Repository<input name="repository" required placeholder="Developer/game-releases"></label>
       <label>Einmalige ID<input name="id" required placeholder="mein-indie-game"></label>
-      <label>Asset-Dateiname enthält<input name="assetPattern" required value=".zip" placeholder="game-win64.zip"></label>
-      <label>Startdatei (relativer EXE-Pfad)<input name="executable" placeholder="Game.exe"></label>
+      <label>Asset-Dateiname enthält<input name="assetPattern" required value=".zip"></label>
+      <label>Startdatei (relativer Pfad)<input name="executable" placeholder="Game.exe / Game.x86_64 / Game.app"></label>
       <label>Beschreibung<input name="description" placeholder="Kurze Beschreibung"></label>
-      <label>itch.io URL<input name="itchUrl" placeholder="https://developer.itch.io/game"></label>
+      <label>Genre<input name="genre" placeholder="Adventure, Horror, RPG …"></label>
+      <label>Cover-Bild URL<input name="cover" placeholder="https://…"></label>
+      <label>Hintergrundbild URL<input name="heroImage" placeholder="https://…"></label>
+      <label>itch.io / Website URL<input name="itchUrl" placeholder="https://…"></label>
+      <label>Startplattform<select name="platform"><option value="auto">Automatisch</option><option value="windows">Windows</option><option value="linux">Linux</option><option value="macos">macOS</option></select></label>
       <label class="check"><input type="checkbox" name="mods"> Mod-Ordner unterstützen</label>
-      <button class="primary full" type="submit">Spiel zur Bibliothek hinzufügen</button>
+      <button class="primary full" type="submit">Spiel hinzufügen</button>
     </form>
   </div></div>
+  <div class="modal hidden" id="settings-modal"><div class="modal-card"><button class="close" id="close-settings">×</button><span class="eyebrow">PERSONALIZATION</span><h2 id="settings-title">Launcher-Einstellungen</h2>
+    <label>Sprache / Language<select id="setting-language"><option value="de">Deutsch</option><option value="en">English</option></select></label>
+    <label>Layoutmodus<select id="setting-layout"><option value="auto">Automatisch (Entwicklerstandard)</option><option value="compact">Kompakt</option><option value="medium">Raster / Liste</option><option value="large">Große Startseite</option></select></label>
+    <label>Ansicht<select id="setting-view"><option value="grid">Raster</option><option value="list">Liste</option></select></label>
+    <label>Akzentfarbe<input id="setting-accent" type="color" value="#c5f36b"></label>
+    <label>Hintergrundfarbe<input id="setting-background" type="color" value="#0b0d12"></label>
+    <label>Panel-Farbe<input id="setting-panel" type="color" value="#121620"></label>
+    <label>Textfarbe<input id="setting-text" type="color" value="#f1f3f7"></label>
+    <label>Große Bibliothek ab<input id="setting-threshold" type="number" min="10" max="10000" value="30"></label>
+    <label>Installationsordner<input id="setting-install-directory" readonly placeholder="Standardordner"></label>
+    <button class="secondary full" id="choose-install-directory">Installationsordner ändern</button>
+    <label class="check"><input type="checkbox" id="setting-notifications" checked> Desktop-Benachrichtigungen</label>
+    <label class="check"><input type="checkbox" id="setting-autostart"> Mit dem Betriebssystem starten</label>
+    <label class="check"><input type="checkbox" id="setting-maximized"> Beim Start maximieren</label>
+    <button class="secondary full" id="open-logs">Diagnose-Logs öffnen</button>
+    <button class="primary full" id="save-settings">Einstellungen speichern</button>
+  </div></div>
+  <div class="modal hidden" id="detail-modal"><div class="modal-card detail-card"><button class="close" id="close-detail">×</button><div class="detail-art" id="detail-art"></div><span class="eyebrow" id="detail-status"></span><h2 id="detail-title">Spiel</h2><p class="muted" id="detail-meta"></p><p id="detail-description"></p><div id="detail-actions" class="card-actions"></div><div id="detail-screenshots" class="detail-screenshots"></div><section class="detail-release"><span class="eyebrow">RELEASE NOTES</span><p id="detail-notes"></p></section></div></div>
+  <div class="modal hidden" id="downloads-modal"><div class="modal-card"><button class="close" id="close-downloads">×</button><span class="eyebrow">DOWNLOAD MANAGER</span><h2 id="downloads-title">Downloads</h2><div id="downloads-list"><p class="muted">Keine aktiven Downloads.</p></div></div></div>
+  <div class="modal hidden" id="mods-modal"><div class="modal-card"><button class="close" id="close-mods">×</button><span class="eyebrow">MOD MANAGER</span><h2 id="mods-title">Mods verwalten</h2><p>Installiere ZIP-Mods oder entferne bereits installierte Mods.</p><div id="mods-list"></div><button class="primary full" id="mods-add">ZIP-Mod installieren</button></div></div>
   <div class="modal hidden" id="about-modal"><div class="modal-card"><button class="close" id="close-about">×</button><span class="eyebrow">CREDITS & ORIGIN</span><h2>Über diesen Launcher</h2><div id="about-content"><p>Originalprojekt von ThornyDevil Studios.</p></div></div></div>
   <script src="renderer.js"></script>
 </body>

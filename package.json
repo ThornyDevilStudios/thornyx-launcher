@@ -1,14 +1,17 @@
 {
   "name": "thornyx-launcher",
   "version": "1.1.0",
-  "description": "A customizable Windows game launcher with permanent original-creator attribution.",
+  "description": "A customizable cross-platform desktop game launcher.",
   "main": "src/main.js",
-  "author": "ThornyDevil Studios",
+  "author": {
+    "name": "ThornyDevil Studios",
+    "email": "thornydevil.studios@gmail.com"
+  },
   "license": "SEE LICENSE IN LICENSE.md",
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder --win nsis --config electron-builder.config.cjs --publish never",
-    "publish": "electron-builder --win nsis --config electron-builder.config.cjs --publish always",
+    "dist": "electron-builder --config electron-builder.config.cjs --publish never",
+    "publish": "electron-builder --config electron-builder.config.cjs --publish always",
     "test": "node --test"
   },
   "dependencies": {
@@ -18,5 +21,6 @@
   "devDependencies": {
     "electron": "^34.3.0",
     "electron-builder": "^26.0.12"
-  }
+  },
+  "desktopName": "thornyx-launcher"
 }
