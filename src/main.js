@@ -115,6 +115,7 @@ function metadataImage(root, value) {
 }
 function readPackagedMetadata(game) {
   const root = installedPath(game);
+  if (!fs.existsSync(root)) return {};
   for (const name of ["thornyx-game.json", "game.json", "metadata.json"]) {
     try {
       const data = JSON.parse(fs.readFileSync(path.join(root, name), "utf8"));
