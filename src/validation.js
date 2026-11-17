@@ -38,7 +38,7 @@ function validateGame(game) {
   const platformExecutables = Object.fromEntries(
     ["windows", "linux", "macos"]
       .filter(key => typeof game.platformExecutables?.[key] === "string" && game.platformExecutables[key])
-      .map(key => [key, (resolveInside("/thornyx-validation-root", game.platformExecutables[key]), game.platformExecutables[key].slice(0, 240))])
+      .map(key => {\n        resolveInside("/thornyx-validation-root", game.platformExecutables[key]);\n        return [key, game.platformExecutables[key].slice(0, 240)];\n      })
   );
   return {
     id: game.id,
