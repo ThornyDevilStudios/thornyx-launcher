@@ -31,7 +31,7 @@ test("resolveInside resolves valid relative paths", () => {
 });
 
 test("resolveInside rejects absolute, traversal and empty paths", () => {
-  for (const value of ["../outside", "bin/../../outside", "/etc/passwd", "", "bin//game"]) {
+  for (const value of ["../outside", "bin/../../outside", "/etc/passwd", "C:\\\\Windows\\\\system32", "\\\\\\\\server\\\\share\\\\game.exe", "", "bin//game"]) {
     assert.throws(() => resolveInside("/games/sample", value));
   }
 });
