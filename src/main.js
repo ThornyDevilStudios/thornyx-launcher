@@ -9,6 +9,7 @@ const extract = require("extract-zip");
 const { autoUpdater } = require("electron-updater");
 const { pathToFileURL } = require("node:url");
 const provenance = require("./provenance");
+const { safeId, safeHttpUrl, validateGame, resolveInside } = require("./validation");
 
 let win;
 let launcherConfig = {};
@@ -56,41 +57,7 @@ function userFiles() {
 function installedPath(game) { return path.join(userFiles(), game.id); }
 function customCatalogPath() { return path.join(app.getPath("userData"), "custom-games.json"); }
 function send(channel, data) { if (win && !win.isDestroyed()) win.webContents.send(channel, data); }
-function safeId(value) { return /^[a-z0-9][a-z0-9-]{1,63}$/.test(value); }
 
-function safeHttpUrl(value) {
-  if (!value) return "";
-  try { const url = new URL(String(value)); return ["https:", "http:"].includes(url.protocol) ? url.toString() : ""; }
-  catch { return ""; }
-}
-function validateGame(game) {
-  if (!game || !safeId(game.id) || !game.name ||
-      !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(game.repository || "")) {
-    throw new Error("Ungültiger Spieleintrag. Benötigt werden ID, Name und GitHub-Repository (owner/repo).");
-  }
-  const executable = String(game.executable || "");
-  if (executable && (path.isAbsolute(executable) || executable.split(/[\\/]/).includes(".."))) {
-    throw new Error("Der EXE-Pfad muss relativ zum Installationsordner sein.");
-  }
-  return {
-    id: game.id,
-    name: String(game.name).slice(0, 80),
-    developer: String(game.developer || "Indie Developer").slice(0, 80),
-    repository: game.repository,
-    channel: game.channel === "prerelease" ? "prerelease" : "stable",
-    assetPattern: String(game.assetPattern || ".zip").slice(0, 120),
-    executable,
-    description: String(game.description || "").slice(0, 1000),
-    genre: String(game.genre || "Uncategorized").slice(0, 80),
-    cover: safeHttpUrl(game.cover),
-    heroImage: safeHttpUrl(game.heroImage),
-    itchUrl: safeHttpUrl(game.itchUrl),
-    mods: Boolean(game.mods),
-    platform: ["windows", "linux", "macos", "auto"].includes(game.platform) ? game.platform : "auto",
-    platformAssets: Object.fromEntries(["windows", "linux", "macos"].filter(key => typeof game.platformAssets?.[key] === "string").map(key => [key, game.platformAssets[key].slice(0, 120)])),
-    platformExecutables: Object.fromEntries(["windows", "linux", "macos"].filter(key => typeof game.platformExecutables?.[key] === "string").map(key => [key, game.platformExecutables[key].slice(0, 240)]))
-  };
-}
 
 async function loadConfiguration() {
   const loaded = JSON.parse(await fsp.readFile(resourceFile("launcher.config.json"), "utf8"));
