@@ -296,8 +296,7 @@ function resolveExecutable(game) {
   const root = path.resolve(installedPath(game));
   const configuredExecutable = game.platformExecutables?.[platformKey()] || game.executable;
   if (configuredExecutable) {
-    const candidate = path.resolve(root, configuredExecutable);
-    if (candidate !== root && !candidate.startsWith(root + path.sep)) throw new Error("Der Startpfad liegt außerhalb des Installationsordners.");
+    const candidate = resolveInside(root, configuredExecutable);
     if (!fs.existsSync(candidate)) throw new Error("Die konfigurierte Startdatei wurde nicht gefunden.");
     return candidate;
   }
@@ -373,8 +372,9 @@ function registerIpc() {
           if (path.isAbsolute(relative) || relative.split(/[\\/]/).includes("..") || !/^[a-f0-9]{64}$/i.test(String(expected))) {
             issues.push("Ungültiger Prüfsummeneintrag: " + relative); continue;
           }
-          const file = path.resolve(installedPath(game), relative);
-          if (!file.startsWith(installedPath(game) + path.sep) || !fs.existsSync(file)) { issues.push("Datei fehlt: " + relative); continue; }
+          let file;
+          try { file = resolveInside(installedPath(game), relative); } catch { issues.push("Ungültiger Dateipfad: " + relative); continue; }
+          if (!fs.existsSync(file)) { issues.push("Datei fehlt: " + relative); continue; }
           const hash = crypto.createHash("sha256");
           for await (const chunk of fs.createReadStream(file)) hash.update(chunk);
           if (hash.digest("hex").toLowerCase() !== String(expected).toLowerCase()) issues.push("Prüfsumme stimmt nicht: " + relative);
@@ -435,8 +435,7 @@ function registerIpc() {
     const game = catalog.games.find(g => g.id === id);
     if (!game || !game.mods || !safeId(modId) || !fs.existsSync(installedPath(game))) throw new Error("Ungültiger Mod-Eintrag.");
     const root = path.resolve(installedPath(game), "Mods");
-    const target = path.resolve(root, modId);
-    if (!target.startsWith(root + path.sep)) throw new Error("Ungültiger Mod-Pfad.");
+    const target = resolveInside(root, modId);
     await fsp.rm(target, { recursive: true, force: true });
     return { success: true };
   });
