@@ -364,6 +364,22 @@ function registerIpc() {
   ipcMain.handle("download:resume", async (_event, id) => resumeGameDownload(id));
   ipcMain.handle("download:cancel", (_event, id) => cancelGameDownload(id));
   ipcMain.handle("game:repair", async (_event, id) => queueInstall(id));
+  ipcMain.handle("game:verify", async (_event, id) => {
+    const game = catalog.games.find(g => g.id === id);
+    if (!game) throw new Error("Spiel nicht gefunden.");
+    const issues = [];
+    if (!fs.existsSync(installedPath(game))) return { ok: false, issues: ["Spielordner fehlt."] };
+    let marker = {};
+    try { marker = JSON.parse(await fsp.readFile(path.join(installedPath(game), ".thornyx-install.json"), "utf8")); }
+    catch { issues.push("Installationsinformationen fehlen oder sind beschädigt."); }
+    if (!marker.version) issues.push("Installierte Versionsnummer fehlt.");
+    if (game.platform === "auto" || game.platform === platformKey() || game.platformExecutables?.[platformKey()]) {
+      try { resolveExecutable(game); } catch (error) { issues.push(error.message); }
+    }
+    writeLog(issues.length ? "WARN" : "INFO", "Installationsprüfung " + game.name + ": " + (issues.join("; ") || "OK"));
+    return { ok: issues.length === 0, issues, version: marker.version || "" };
+  });
+
   ipcMain.handle("game:open-folder", async (_event, id) => {
     const game = catalog.games.find(g => g.id === id);
     if (!game || !fs.existsSync(installedPath(game))) throw new Error("Spielordner nicht gefunden.");
