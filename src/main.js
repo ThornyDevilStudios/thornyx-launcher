@@ -210,7 +210,16 @@ async function getCatalogView() {
 async function download(url, destination, gameId, expectedSize = 0, expectedDigest = "") {
   let offset = 0;
   try { offset = (await fsp.stat(destination)).size; } catch {}
-  if (expectedSize && offset >= expectedSize) return { success: true };
+  if (expectedSize && offset > expectedSize) { await fsp.rm(destination, { force: true }); offset = 0; }
+  if (expectedSize && offset === expectedSize) {
+    const expectedHash = String(expectedDigest || "").replace(/^sha256:/i, "").toLowerCase();
+    if (/^[a-f0-9]{64}$/.test(expectedHash)) {
+      const hash = crypto.createHash("sha256");
+      for await (const chunk of fs.createReadStream(destination)) hash.update(chunk);
+      if (hash.digest("hex").toLowerCase() !== expectedHash) { await fsp.rm(destination, { force: true }); offset = 0; }
+      else return { success: true };
+    } else return { success: true };
+  }
   const controller = new AbortController();
   downloadControllers.set(gameId, controller);
   try {
