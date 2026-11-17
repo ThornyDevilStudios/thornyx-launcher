@@ -116,7 +116,8 @@ function publicConfig() {
     version: app.getVersion(),
     updateEnabled: Boolean(launcherConfig.updateRepository),
     library: launcherConfig.library || { layoutMode: "auto", largeLibraryThreshold: 30, compactMaxGames: 9, mediumMaxGames: 29 },
-    settings: launcherConfig.settings || {}
+    settings: launcherConfig.settings || {},
+    communityUrl: safeHttpUrl(launcherConfig.communityUrl || launcherConfig.branding?.communityUrl)
   };
 }
 async function getReleases(game) {
