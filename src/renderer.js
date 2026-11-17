@@ -103,6 +103,7 @@ async function perform(id,action) {
     else if(action==="uninstall"){if(confirm(g.name+" wirklich deinstallieren?")){await window.launcher.uninstallGame(id);await refresh();}}
     else if(action==="mods")await openModsManager(id);
     else if(action==="folder")await window.launcher.openGameFolder(id);
+    else if(action==="verify"){const result=await window.launcher.verifyGame(id);alert(result.ok?"Installation sieht vollständig aus (Version "+result.version+").": "Probleme gefunden:\n"+result.issues.join("\n"));}
     else if(action==="repair"){if(confirm(g.name+" erneut herunterladen und reparieren?")){busy.add(id);render();await window.launcher.repairGame(id);await refresh();}}
     else if(action==="notes"&&g.htmlUrl)await window.launcher.openExternal(g.htmlUrl);
     else if(action==="store"&&g.itchUrl)await window.launcher.openExternal(g.itchUrl);
@@ -139,7 +140,7 @@ function openGameDetail(id) {
   $("detail-notes").textContent=g.body||"Keine Release-Notizen verfügbar.";
   $("detail-status").textContent=!g.supportedPlatform?"Für dieses Betriebssystem nicht verfügbar":g.installed?(g.updateAvailable?"Update verfügbar":"Installiert · "+(g.installedVersion||"Version unbekannt")):"Noch nicht installiert";
   $("detail-actions").innerHTML='<button class="primary" data-action="main" data-id="'+esc(g.id)+'">'+(g.installed?(g.updateAvailable?"Update installieren":"Spielen"):"Installieren")+'</button>'+(g.installed?'<button class="secondary" data-action="uninstall" data-id="'+esc(g.id)+'">Deinstallieren</button>':"")+(g.mods&&g.installed?'<button class="secondary" data-action="mods" data-id="'+esc(g.id)+'">Mods-Ordner</button>':"")+(g.htmlUrl?'<button class="secondary" data-action="notes" data-id="'+esc(g.id)+'">Release auf GitHub</button>':"");
-  if(g.installed){const folder=document.createElement("button");folder.className="secondary";folder.textContent="Ordner öffnen";folder.onclick=()=>perform(g.id,"folder");const repair=document.createElement("button");repair.className="secondary";repair.textContent="Reparieren";repair.onclick=()=>perform(g.id,"repair");$("detail-actions").append(folder,repair);}
+  if(g.installed){const folder=document.createElement("button");folder.className="secondary";folder.textContent="Ordner öffnen";folder.onclick=()=>perform(g.id,"folder");const verify=document.createElement("button");verify.className="secondary";verify.textContent="Dateien prüfen";verify.onclick=()=>perform(g.id,"verify");const repair=document.createElement("button");repair.className="secondary";repair.textContent="Reparieren";repair.onclick=()=>perform(g.id,"repair");$("detail-actions").append(folder,verify,repair);}
   $("detail-modal").classList.remove("hidden");
 }
 document.addEventListener("click",e=>{
