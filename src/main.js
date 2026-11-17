@@ -16,6 +16,7 @@ let catalog = { games: [], studio: { name: "Indie Games" } };
 let installQueue = Promise.resolve();
 const queuedGameIds = [];
 const downloadControllers = new Map();
+const downloadFiles = new Map();
 const pausedDownloads = new Set();
 const cancelledDownloads = new Set();
 function publishDownloadQueue() { send("download:queue", { queue: [...queuedGameIds], paused: [...pausedDownloads] }); }
@@ -32,7 +33,7 @@ function queueInstall(id) {
 }
 function pauseGameDownload(id) { pausedDownloads.add(id); downloadControllers.get(id)?.abort(); publishDownloadQueue(); return { success: true }; }
 function resumeGameDownload(id) { pausedDownloads.delete(id); cancelledDownloads.delete(id); publishDownloadQueue(); return queueInstall(id); }
-function cancelGameDownload(id) { cancelledDownloads.add(id); pausedDownloads.delete(id); downloadControllers.get(id)?.abort(); publishDownloadQueue(); return { success: true }; }
+async function cancelGameDownload(id) { cancelledDownloads.add(id); pausedDownloads.delete(id); const active = downloadControllers.has(id); downloadControllers.get(id)?.abort(); if (!active) { const file = downloadFiles.get(id); if (file) await fsp.rm(file, { force: true }); downloadFiles.delete(id); } publishDownloadQueue(); return { success: true }; }
 
 function resourceFile(name) {
   return app.isPackaged ? path.join(process.resourcesPath, name) : path.join(__dirname, "..", name);
@@ -262,6 +263,7 @@ async function installGame(id) {
   const backup = target + ".old";
   const safeVersion = String(latest.tag_name || "latest").replace(/[^A-Za-z0-9._-]/g, "_");
   const archive = path.join(root, `${id}-${safeVersion}-download${path.extname(asset.name)}`);
+  downloadFiles.set(id, archive);
   let movedOld = false;
   let keepArchive = false;
 
@@ -303,7 +305,7 @@ async function installGame(id) {
     if (cancelledDownloads.has(id)) return { success: false, cancelled: true };
     throw error;
   } finally {
-    if (!keepArchive) await fsp.rm(archive, { force: true });
+    if (!keepArchive) { await fsp.rm(archive, { force: true }); downloadFiles.delete(id); }
   }
 }
 function resolveExecutable(game) {
