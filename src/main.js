@@ -25,6 +25,11 @@ function customCatalogPath() { return path.join(app.getPath("userData"), "custom
 function send(channel, data) { if (win && !win.isDestroyed()) win.webContents.send(channel, data); }
 function safeId(value) { return /^[a-z0-9][a-z0-9-]{1,63}$/.test(value); }
 
+function safeHttpUrl(value) {
+  if (!value) return "";
+  try { const url = new URL(String(value)); return ["https:", "http:"].includes(url.protocol) ? url.toString() : ""; }
+  catch { return ""; }
+}
 function validateGame(game) {
   if (!game || !safeId(game.id) || !game.name ||
       !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(game.repository || "")) {
@@ -42,10 +47,13 @@ function validateGame(game) {
     channel: game.channel === "prerelease" ? "prerelease" : "stable",
     assetPattern: String(game.assetPattern || ".zip").slice(0, 120),
     executable,
-    description: String(game.description || "").slice(0, 500),
-    itchUrl: String(game.itchUrl || ""),
+    description: String(game.description || "").slice(0, 1000),
+    genre: String(game.genre || "Uncategorized").slice(0, 80),
+    cover: safeHttpUrl(game.cover),
+    heroImage: safeHttpUrl(game.heroImage),
+    itchUrl: safeHttpUrl(game.itchUrl),
     mods: Boolean(game.mods),
-    platform: "windows"
+    platform: ["windows", "linux", "macos", "auto"].includes(game.platform) ? game.platform : "auto"
   };
 }
 
@@ -91,6 +99,24 @@ function readInstalledVersion(id) {
     return JSON.parse(fs.readFileSync(path.join(installedPath({ id }), ".thornyx-install.json"), "utf8")).version || "";
   } catch { return ""; }
 }
+function readPackagedMetadata(game) {
+  const root = installedPath(game);
+  for (const name of ["thornyx-game.json", "game.json", "metadata.json"]) {
+    try {
+      const data = JSON.parse(fs.readFileSync(path.join(root, name), "utf8"));
+      return {
+        name: typeof data.title === "string" ? data.title.slice(0, 80) : game.name,
+        description: typeof data.description === "string" ? data.description.slice(0, 1000) : game.description,
+        genre: typeof data.genre === "string" ? data.genre.slice(0, 80) : game.genre,
+        developer: typeof data.developer === "string" ? data.developer.slice(0, 80) : game.developer,
+        cover: safeHttpUrl(data.cover || data.coverUrl) || game.cover,
+        heroImage: safeHttpUrl(data.heroImage || data.background) || game.heroImage,
+        website: safeHttpUrl(data.website) || game.itchUrl
+      };
+    } catch {}
+  }
+  return {};
+}
 function releaseInfo(game, releases) {
   const latest = releases[0];
   const asset = latest?.assets?.find(a => a.name.toLowerCase().includes(game.assetPattern.toLowerCase()));
@@ -111,7 +137,7 @@ async function getCatalogView() {
   return Promise.all(catalog.games.map(async game => {
     try {
       const info = releaseInfo(game, await getReleases(game));
-      return { ...game, ...info, updateAvailable: info.installed && info.version !== info.installedVersion };
+      return { ...game, ...readPackagedMetadata(game), ...info, updateAvailable: info.installed && info.version !== info.installedVersion };
     } catch (error) {
       return {
         ...game,
@@ -191,15 +217,18 @@ function resolveExecutable(game) {
   const root = path.resolve(installedPath(game));
   if (game.executable) {
     const candidate = path.resolve(root, game.executable);
-    if (!candidate.startsWith(root + path.sep) || !fs.existsSync(candidate)) {
-      throw new Error("Die konfigurierte EXE wurde im Installationsordner nicht gefunden.");
-    }
+    if (candidate !== root && !candidate.startsWith(root + path.sep)) throw new Error("Der Startpfad liegt außerhalb des Installationsordners.");
+    if (!fs.existsSync(candidate)) throw new Error("Die konfigurierte Startdatei wurde nicht gefunden.");
     return candidate;
   }
   const files = fs.readdirSync(root, { recursive: true });
-  const exe = files.find(file => String(file).toLowerCase().endsWith(".exe") && !String(file).toLowerCase().includes("unins"));
-  if (!exe) throw new Error("Keine EXE gefunden. Bitte im Spieleintrag den korrekten executable-Pfad angeben.");
-  return path.join(root, exe);
+  const wanted = process.platform === "win32" ? [".exe"] : process.platform === "darwin" ? [".app", ".command"] : [".x86_64", ".x86", ".sh", ""];
+  const match = files.find(file => {
+    const value = String(file).toLowerCase();
+    return wanted.some(ext => ext && value.endsWith(ext)) && !value.includes("unins");
+  });
+  if (!match) throw new Error("Keine passende Startdatei gefunden. Bitte den relativen executable-Pfad konfigurieren.");
+  return path.join(root, match);
 }
 function registerIpc() {
   ipcMain.handle("config:get", () => publicConfig());
@@ -211,6 +240,12 @@ function registerIpc() {
     if (!game || !fs.existsSync(installedPath(game))) throw new Error("Installiere das Spiel zuerst.");
     const { spawn } = require("node:child_process");
     const exe = resolveExecutable(game);
+    if (process.platform === "darwin" && exe.toLowerCase().endsWith(".app")) {
+      const error = await shell.openPath(exe);
+      if (error) throw new Error(error);
+      return { success: true };
+    }
+    if (process.platform !== "win32") await fsp.chmod(exe, 0o755).catch(() => {});
     const child = spawn(exe, [], { cwd: path.dirname(exe), detached: true, stdio: "ignore" });
     child.unref();
     return { success: true };
