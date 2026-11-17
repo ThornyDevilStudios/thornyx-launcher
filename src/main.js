@@ -143,26 +143,28 @@ function metadataImage(root, value) {
 function readPackagedMetadata(game) {
   const root = installedPath(game);
   if (!fs.existsSync(root)) return {};
+  const images = fs.readdirSync(root, { recursive: true }).filter(file => /\.(png|jpe?g|webp)$/i.test(String(file)));
+  const coverFile = images.find(file => /(^|[\\/])(cover|poster|thumbnail)\./i.test(String(file))) || images.find(file => /cover|poster|thumbnail/i.test(String(file)));
+  const heroFile = images.find(file => /(^|[\\/])(banner|background|hero)\./i.test(String(file))) || images.find(file => /banner|background|hero/i.test(String(file)));
+  const detectedCover = coverFile ? metadataImage(root, String(coverFile)) : game.cover;
+  const detectedHero = heroFile ? metadataImage(root, String(heroFile)) : game.heroImage;
   for (const name of ["thornyx-game.json", "game.json", "metadata.json"]) {
     try {
       const data = JSON.parse(fs.readFileSync(path.join(root, name), "utf8"));
       const screenshots = Array.isArray(data.screenshots) ? data.screenshots.slice(0, 8).map(value => metadataImage(root, value)).filter(Boolean) : [];
       return {
-        name: typeof data.title === "string" ? data.title.slice(0, 80) : game.name,
+        name: typeof data.title === "string" ? data.title.slice(0, 80) : (typeof data.name === "string" ? data.name.slice(0, 80) : game.name),
         description: typeof data.description === "string" ? data.description.slice(0, 1000) : game.description,
         genre: typeof data.genre === "string" ? data.genre.slice(0, 80) : game.genre,
         developer: typeof data.developer === "string" ? data.developer.slice(0, 80) : game.developer,
-        cover: metadataImage(root, data.cover || data.coverUrl) || game.cover,
-        heroImage: metadataImage(root, data.heroImage || data.background) || game.heroImage,
+        cover: metadataImage(root, data.cover || data.coverUrl) || detectedCover,
+        heroImage: metadataImage(root, data.heroImage || data.background) || detectedHero,
         screenshots,
         website: safeHttpUrl(data.website) || game.itchUrl
       };
     } catch {}
   }
-  const images = fs.readdirSync(root, { recursive: true }).filter(file => /\.(png|jpe?g|webp)$/i.test(String(file)));
-  const cover = images.find(file => /(^|[\\/])(cover|poster|thumbnail)\./i.test(String(file))) || images.find(file => /cover|poster|thumbnail/i.test(String(file)));
-  const hero = images.find(file => /(^|[\\/])(banner|background|hero)\./i.test(String(file))) || images.find(file => /banner|background|hero/i.test(String(file)));
-  return { cover: cover ? metadataImage(root, String(cover)) : game.cover, heroImage: hero ? metadataImage(root, String(hero)) : game.heroImage };
+  return { cover: detectedCover, heroImage: detectedHero };
 }
 
 function platformKey() { return process.platform === "win32" ? "windows" : process.platform === "darwin" ? "macos" : "linux"; }
