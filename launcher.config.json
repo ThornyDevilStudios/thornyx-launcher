@@ -10,7 +10,20 @@
     "website": "https://thornydevilstudios.itch.io/",
     "logo": "",
     "accentColor": "#c5f36b",
-    "backgroundColor": "#0b0d12"
+    "backgroundColor": "#0b0d12",
+    "panelColor": "#121620",
+    "textColor": "#f1f3f7"
+  },
+  "library": {
+    "layoutMode": "auto",
+    "largeLibraryThreshold": 30,
+    "compactMaxGames": 9,
+    "mediumMaxGames": 29,
+    "sidebarPosition": "left",
+    "mediumView": "grid",
+    "showInstalledSidebar": true,
+    "homeSections": ["recent", "newest", "all"],
+    "filters": ["genre", "developer", "name"]
   },
   "appId": "studio.thornydevil.thornyxlauncher",
   "updateRepository": "ThornyDevilStudios/thornyx-launcher",
