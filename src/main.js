@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain, shell, dialog, Notification } = require("electron");
 const path = require("node:path");
+const crypto = require("node:crypto");
 const fs = require("node:fs");
 const fsp = require("node:fs/promises");
 const { pipeline } = require("node:stream/promises");
@@ -376,8 +377,27 @@ function registerIpc() {
     if (game.platform === "auto" || game.platform === platformKey() || game.platformExecutables?.[platformKey()]) {
       try { resolveExecutable(game); } catch (error) { issues.push(error.message); }
     }
+    let checksumCount = 0;
+    for (const manifestName of ["thornyx-game.json", "game.json", "metadata.json"]) {
+      try {
+        const manifest = JSON.parse(await fsp.readFile(path.join(installedPath(game), manifestName), "utf8"));
+        if (!manifest.checksums || typeof manifest.checksums !== "object" || Array.isArray(manifest.checksums)) continue;
+        for (const [relative, expected] of Object.entries(manifest.checksums)) {
+          if (path.isAbsolute(relative) || relative.split(/[\\/]/).includes("..") || !/^[a-f0-9]{64}$/i.test(String(expected))) {
+            issues.push("Ungültiger Prüfsummeneintrag: " + relative); continue;
+          }
+          const file = path.resolve(installedPath(game), relative);
+          if (!file.startsWith(installedPath(game) + path.sep) || !fs.existsSync(file)) { issues.push("Datei fehlt: " + relative); continue; }
+          const hash = crypto.createHash("sha256");
+          for await (const chunk of fs.createReadStream(file)) hash.update(chunk);
+          if (hash.digest("hex").toLowerCase() !== String(expected).toLowerCase()) issues.push("Prüfsumme stimmt nicht: " + relative);
+          checksumCount++;
+        }
+        break;
+      } catch {}
+    }
     writeLog(issues.length ? "WARN" : "INFO", "Installationsprüfung " + game.name + ": " + (issues.join("; ") || "OK"));
-    return { ok: issues.length === 0, issues, version: marker.version || "" };
+    return { ok: issues.length === 0, issues, version: marker.version || "", verificationLevel: checksumCount ? "full" : "basic", checkedFiles: checksumCount };
   });
 
   ipcMain.handle("game:open-folder", async (_event, id) => {
