@@ -12,6 +12,8 @@ const provenance = require("./provenance");
 let win;
 let launcherConfig = {};
 let catalog = { games: [], studio: { name: "Indie Games" } };
+let installQueue = Promise.resolve();
+function queueInstall(id) { const task = installQueue.then(() => installGame(id)); installQueue = task.catch(() => {}); return task; }
 
 function resourceFile(name) {
   return app.isPackaged ? path.join(process.resourcesPath, name) : path.join(__dirname, "..", name);
@@ -268,8 +270,8 @@ function registerIpc() {
   });
   ipcMain.handle("catalog:get", getCatalogView);
   ipcMain.handle("updates:check", getCatalogView);
-  ipcMain.handle("game:install", async (_event, id) => installGame(id));
-  ipcMain.handle("game:repair", async (_event, id) => installGame(id));
+  ipcMain.handle("game:install", async (_event, id) => queueInstall(id));
+  ipcMain.handle("game:repair", async (_event, id) => queueInstall(id));
   ipcMain.handle("game:open-folder", async (_event, id) => {
     const game = catalog.games.find(g => g.id === id);
     if (!game || !fs.existsSync(installedPath(game))) throw new Error("Spielordner nicht gefunden.");
