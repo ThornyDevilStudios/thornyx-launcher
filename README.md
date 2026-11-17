@@ -37,6 +37,7 @@ Edit **launcher.config.json** before building:
 | `branding.developerLabel` | Small heading in the top bar |
 | `branding.website` | Website/store link in the sidebar |
 | `branding.logo` | Optional local/remote image path or URL supported by the UI |
+| `communityUrl` | Optional community destination (Discord, GitHub Discussions, forum, etc.); hides the Community item when empty |
 | `branding.accentColor`, `branding.backgroundColor`, `branding.panelColor`, `branding.textColor` | Hex colors |
 | `library.layoutMode` | `auto`, `compact`, `medium`, or `large` |
 | `library.largeLibraryThreshold` | Default: 30 games |
