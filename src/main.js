@@ -19,6 +19,7 @@ const pausedDownloads = new Set();
 const cancelledDownloads = new Set();
 function publishDownloadQueue() { send("download:queue", { queue: [...queuedGameIds], paused: [...pausedDownloads] }); }
 function queueInstall(id) {
+  cancelledDownloads.delete(id);
   if (!queuedGameIds.includes(id)) queuedGameIds.push(id);
   publishDownloadQueue();
   const task = installQueue.then(() => pausedDownloads.has(id) || cancelledDownloads.has(id) ? { paused: pausedDownloads.has(id), cancelled: cancelledDownloads.has(id) } : installGame(id));
