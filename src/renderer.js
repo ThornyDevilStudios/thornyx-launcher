@@ -1,5 +1,5 @@
 const $ = id => document.getElementById(id);
-let games = [], view = "all", busy = new Set(), launcherConfig = {}, layout = "medium", displayMode = "grid", downloadQueue = [], downloadProgress = {};
+let games = [], view = "all", busy = new Set(), launcherConfig = {}, layout = "medium", displayMode = "grid", downloadQueue = [], downloadProgress = {}, pausedDownloadIds = new Set();
 const prefs = () => { try { return JSON.parse(localStorage.getItem("thornyx-preferences") || "{}"); } catch { return {}; } };
 function savePrefs(value) { localStorage.setItem("thornyx-preferences", JSON.stringify(value)); }
 function esc(value="") { return String(value).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
@@ -153,7 +153,7 @@ $("close-downloads").onclick=()=>$("downloads-modal").classList.add("hidden");
 $("mods-add").onclick=async()=>{const id=$("mods-modal").dataset.gameId;try{const result=await window.launcher.installMod(id);if(!result.canceled)await refreshModsList(id);}catch(e){alert(e.message);}};
 $("mods-list").addEventListener("click",async e=>{const b=e.target.closest("[data-remove-mod]");if(!b)return;const id=$("mods-modal").dataset.gameId;if(confirm("Mod wirklich entfernen?")){try{await window.launcher.removeMod(id,b.dataset.removeMod);await refreshModsList(id);}catch(err){alert(err.message);}}});
 window.launcher.onProgress(d=>{$("status").textContent="Download: "+(d.total?d.percent+"%":formatSize(d.received));downloadProgress[d.id]=d;renderDownloads();});
-window.launcher.onQueue(d=>{downloadQueue=d.queue||[];renderDownloads();});
+window.launcher.onQueue(d=>{downloadQueue=d.queue||[];pausedDownloadIds=new Set(d.paused||[]);renderDownloads();});
 window.launcher.onStatus(d=>$("status").textContent=d.message);
 window.launcher.onLauncherUpdate(async d=>{if(confirm("Eine neue Launcher-Version ("+d.version+") ist verfügbar. Jetzt herunterladen?")){try{await window.launcher.downloadLauncherUpdate();if(confirm("Update heruntergeladen. Launcher jetzt neu starten?"))window.launcher.installLauncherUpdate();}catch(e){alert(e.message);}}});
 (async()=>{try{launcherConfig=await window.launcher.getConfig();const p=prefs();displayMode=p.view||launcherConfig.library?.mediumView||"grid";applyBranding();await refresh();}catch(e){$("status").textContent="Konfiguration: "+e.message;}})();
