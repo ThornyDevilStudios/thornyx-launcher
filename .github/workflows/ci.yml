@@ -10,8 +10,8 @@ permissions:
   contents: read
 
 jobs:
-  windows-build:
-    runs-on: windows-latest
+  test:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -19,18 +19,41 @@ jobs:
           node-version: 20
       - name: Install dependencies
         run: npm install
-      - name: Validate configuration and catalog
-        run: npm test
-      - name: Check JavaScript syntax
-        shell: pwsh
+      - name: Test and syntax checks
         run: |
+          npm test
           node --check src/main.js
           node --check src/preload.js
           node --check src/renderer.js
           node --check electron-builder.config.cjs
-      - name: Build Windows installer (no publishing)
+
+  build:
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            artifact: windows
+            pattern: dist/*.exe
+          - os: ubuntu-latest
+            artifact: linux
+            pattern: dist/*.AppImage
+          - os: macos-latest
+            artifact: macos
+            pattern: dist/*.dmg
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: npm install
+      - name: Build installer
         run: npm run dist
       - uses: actions/upload-artifact@v4
         with:
-          name: thornyx-launcher-windows
-          path: dist/*.exe
+          name: thornyx-launcher-${{ matrix.artifact }}
+          path: ${{ matrix.pattern }}
+          if-no-files-found: error
