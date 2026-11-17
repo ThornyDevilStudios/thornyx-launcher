@@ -1,0 +1,35 @@
+name: Launcher CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  windows-build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: npm install
+      - name: Validate catalog
+        run: npm test
+      - name: Check JavaScript syntax
+        shell: pwsh
+        run: |
+          node --check src/main.js
+          node --check src/preload.js
+          node --check src/renderer.js
+      - name: Build Windows installer
+        run: npm run dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: thornyx-launcher-windows
+          path: dist/*.exe
