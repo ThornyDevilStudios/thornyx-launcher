@@ -200,8 +200,9 @@ async function download(url, destination, gameId) {
   const controller = new AbortController();
   downloadControllers.set(gameId, controller);
   try {
-    let headers = offset ? { Range: "bytes=" + offset + "-" } : {};
-    let response = await fetch(url, { headers, signal: controller.signal, redirect: "follow", headers: { ...headers, "User-Agent": "Thornyx-Launcher" } });
+    const headers = { "User-Agent": "Thornyx-Launcher" };
+    if (offset) headers.Range = "bytes=" + offset + "-";
+    let response = await fetch(url, { headers, signal: controller.signal, redirect: "follow" });
     if (offset && response.status !== 206) {
       await fsp.rm(destination, { force: true });
       offset = 0;
