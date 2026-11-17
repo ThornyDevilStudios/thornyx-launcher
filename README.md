@@ -1,6 +1,6 @@
 # Thornyx Launcher
 
-A customizable Windows desktop game launcher built with Electron. The original project was created by **ThornyDevil Studios**.
+A customizable cross-platform desktop game launcher built with Electron. The original project was created by **ThornyDevil Studios**.
 
 > Forks may customize the product branding and game catalog. Redistributed builds must retain the separate in-app attribution notice required by [LICENSE.md](LICENSE.md).
 
@@ -11,7 +11,7 @@ A customizable Windows desktop game launcher built with Electron. The original p
 - Downloads and installs updates without requiring users to reinstall the launcher.
 - Starts the configured game executable and supports optional Mods folders.
 - Lets users add public GitHub release repositories from the launcher UI.
-- Supports fork-specific branding, catalog, app ID and launcher update repository.
+- Supports fork-specific branding, catalog, app ID and launcher update repository.\n- Adaptive library: compact sidebar, medium grid/list, and large discovery dashboard.\n- Automatic layout selection (large library at 30 games by default) with developer override.\n- Search, genre/developer filters, sorting, installed-games sidebar and user color settings.\n- Optional game metadata manifests (`thornyx-game.json`, `game.json`, or `metadata.json`) for title, description, genre, developer, cover and background.\n- CI build targets for Windows, Linux and macOS.
 - Checks for launcher updates only when an update repository is configured.
 
 ## Configure your fork
@@ -27,7 +27,7 @@ Edit **launcher.config.json** before building:
 | `branding.developerLabel` | Small heading in the top bar |
 | `branding.website` | Website/store link in the sidebar |
 | `branding.logo` | Optional local/remote image path or URL supported by the UI |
-| `branding.accentColor`, `branding.backgroundColor` | Hex colors, e.g. `#c5f36b` |
+| `branding.accentColor`, `branding.backgroundColor`, `branding.panelColor`, `branding.textColor` | Hex colors |\n| `library.layoutMode` | `auto`, `compact`, `medium`, or `large` |\n| `library.largeLibraryThreshold` | Default: 30 games |\n| `library.compactMaxGames` | Default: 9 games |\n| `library.sidebarPosition` | `left` or `right` |
 | `appId` | Unique reverse-domain application ID for your fork |
 | `updateRepository` | Your own GitHub repository in `owner/repo` form; set to an empty string to disable self-updates |
 | `catalogFile` | JSON game catalog file, normally `catalog.json` |
@@ -85,3 +85,25 @@ The three game repositories currently referenced by the default `catalog.json` a
 ## License
 
 This project is distributed under the custom attribution terms in [LICENSE.md](LICENSE.md). It is **not MIT licensed** and is not an OSI-approved open-source license. The terms require preservation of creator notices and a visible in-app attribution for redistributed applications. Seek legal review before relying on these terms for a commercial release.
+
+## Game metadata manifest
+
+A game's release ZIP may include one of these files at its root: `thornyx-game.json`, `game.json`, or `metadata.json`. The launcher reads optional `title`, `description`, `genre`, `developer`, `cover` (or `coverUrl`), `heroImage` (or `background`) and `website` fields after installation. The manifest supplements the catalog; catalog entries remain the source for repository and install settings.
+
+Example:
+
+```json
+{
+  "title": "My Indie Game",
+  "description": "A short game description.",
+  "genre": "Adventure",
+  "developer": "Example Studio",
+  "cover": "https://example.com/cover.jpg",
+  "heroImage": "https://example.com/background.jpg",
+  "website": "https://example.com"
+}
+```
+
+## Platform builds
+
+CI produces Windows NSIS installers, Linux AppImages and macOS DMGs. A game must publish a compatible release asset for the user's operating system and configure its relative launch path. Cross-platform launcher packages do not make a Windows-only game compatible with Linux or macOS. Mobile is not currently supported.
