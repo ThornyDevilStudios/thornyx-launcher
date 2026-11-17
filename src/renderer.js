@@ -86,7 +86,7 @@ async function perform(id,action) {
   try {
     if(action==="main"){if(g.installed&&!g.updateAvailable)await window.launcher.launchGame(id);else{if(g.installed&&g.updateAvailable&&!confirm("Update für "+g.name+" jetzt installieren?"))return;busy.add(id);render();await window.launcher.installGame(id);await refresh();}}
     else if(action==="uninstall"){if(confirm(g.name+" wirklich deinstallieren?")){await window.launcher.uninstallGame(id);await refresh();}}
-    else if(action==="mods")await window.launcher.openMods(id);
+    else if(action==="mods")await openModsManager(id);
     else if(action==="folder")await window.launcher.openGameFolder(id);
     else if(action==="repair"){if(confirm(g.name+" erneut herunterladen und reparieren?")){busy.add(id);render();await window.launcher.repairGame(id);await refresh();}}
     else if(action==="notes"&&g.htmlUrl)await window.launcher.openExternal(g.htmlUrl);
@@ -95,6 +95,23 @@ async function perform(id,action) {
 }
 $("games").addEventListener("click",e=>{const b=e.target.closest("[data-action]");if(b)perform(b.dataset.id,b.dataset.action);});
 
+async function openModsManager(id) {
+  const g=games.find(x=>x.id===id); if(!g)return;
+  $("mods-title").textContent="Mods · "+g.name;
+  $("mods-modal").dataset.gameId=id;
+  $("mods-modal").classList.remove("hidden");
+  await refreshModsList(id);
+}
+async function refreshModsList(id) {
+  const list=await window.launcher.listMods(id), root=$("mods-list");
+  root.replaceChildren();
+  if(!list.length){const empty=document.createElement("p");empty.className="muted";empty.textContent="Noch keine Mods installiert.";root.append(empty);return;}
+  for(const mod of list){
+    const row=document.createElement("div"), name=document.createElement("span"), remove=document.createElement("button");
+    row.className="mod-row";name.textContent=mod.name;remove.className="danger";remove.textContent="Entfernen";remove.dataset.removeMod=mod.id;
+    row.append(name,remove);root.append(row);
+  }
+}
 function openGameDetail(id) {
   const g=games.find(x=>x.id===id); if(!g)return;
   const art=g.heroImage||g.cover;
@@ -127,8 +144,11 @@ $("save-settings").onclick=()=>{savePrefs({layout:$("setting-layout").value,view
 $("view-grid").onclick=()=>{displayMode="grid";render();};$("view-list").onclick=()=>{displayMode="list";render();};
 $("nav-about").onclick=()=>$("about-modal").classList.remove("hidden");
 $("close-modal").onclick=()=>$("add-modal").classList.add("hidden");$("close-about").onclick=()=>$("about-modal").classList.add("hidden");$("close-settings").onclick=()=>$("settings-modal").classList.add("hidden");
-["add-modal","about-modal","settings-modal"].forEach(id=>$(id).addEventListener("click",e=>{if(e.target.id===id)$(id).classList.add("hidden");}));
+["add-modal","about-modal","settings-modal","mods-modal"].forEach(id=>$(id).addEventListener("click",e=>{if(e.target.id===id)$(id).classList.add("hidden");}));
 $("add-form").addEventListener("submit",async e=>{e.preventDefault();const d=new FormData(e.currentTarget),g=Object.fromEntries(d.entries());g.mods=d.has("mods");try{await window.launcher.addGame(g);e.currentTarget.reset();$("add-modal").classList.add("hidden");await refresh();}catch(err){alert(err.message);}});
+$("close-mods").onclick=()=>$("mods-modal").classList.add("hidden");
+$("mods-add").onclick=async()=>{const id=$("mods-modal").dataset.gameId;try{const result=await window.launcher.installMod(id);if(!result.canceled)await refreshModsList(id);}catch(e){alert(e.message);}};
+$("mods-list").addEventListener("click",async e=>{const b=e.target.closest("[data-remove-mod]");if(!b)return;const id=$("mods-modal").dataset.gameId;if(confirm("Mod wirklich entfernen?")){try{await window.launcher.removeMod(id,b.dataset.removeMod);await refreshModsList(id);}catch(err){alert(err.message);}}});
 window.launcher.onProgress(d=>$("status").textContent="Download: "+(d.total?d.percent+"%":formatSize(d.received)));
 window.launcher.onStatus(d=>$("status").textContent=d.message);
 window.launcher.onLauncherUpdate(async d=>{if(confirm("Eine neue Launcher-Version ("+d.version+") ist verfügbar. Jetzt herunterladen?")){try{await window.launcher.downloadLauncherUpdate();if(confirm("Update heruntergeladen. Launcher jetzt neu starten?"))window.launcher.installLauncherUpdate();}catch(e){alert(e.message);}}});
