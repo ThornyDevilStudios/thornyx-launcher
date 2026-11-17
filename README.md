@@ -11,7 +11,12 @@ A customizable cross-platform desktop game launcher built with Electron. The ori
 - Downloads and installs updates without requiring users to reinstall the launcher.
 - Starts the configured game executable and supports optional Mods folders.
 - Lets users add public GitHub release repositories from the launcher UI.
-- Supports fork-specific branding, catalog, app ID and launcher update repository.\n- Adaptive library: compact sidebar, medium grid/list, and large discovery dashboard.\n- Automatic layout selection (large library at 30 games by default) with developer override.\n- Search, genre/developer filters, sorting, installed-games sidebar and user color settings.\n- Optional game metadata manifests (`thornyx-game.json`, `game.json`, or `metadata.json`) for title, description, genre, developer, cover and background.\n- CI build targets for Windows, Linux and macOS.
+- Supports fork-specific branding, catalog, app ID and launcher update repository.
+- Adaptive library: compact sidebar, medium grid/list, and large discovery dashboard.
+- Automatic layout selection (large library at 30 games by default) with developer override.
+- Search, genre/developer filters, sorting, installed-games sidebar and user color settings.
+- Optional game metadata manifests (`thornyx-game.json`, `game.json`, or `metadata.json`) for title, description, genre, developer, cover and background.
+- CI build targets for Windows, Linux and macOS.
 - Checks for launcher updates only when an update repository is configured.
 
 ## Configure your fork
@@ -27,7 +32,11 @@ Edit **launcher.config.json** before building:
 | `branding.developerLabel` | Small heading in the top bar |
 | `branding.website` | Website/store link in the sidebar |
 | `branding.logo` | Optional local/remote image path or URL supported by the UI |
-| `branding.accentColor`, `branding.backgroundColor`, `branding.panelColor`, `branding.textColor` | Hex colors |\n| `library.layoutMode` | `auto`, `compact`, `medium`, or `large` |\n| `library.largeLibraryThreshold` | Default: 30 games |\n| `library.compactMaxGames` | Default: 9 games |\n| `library.sidebarPosition` | `left` or `right` |
+| `branding.accentColor`, `branding.backgroundColor`, `branding.panelColor`, `branding.textColor` | Hex colors |
+| `library.layoutMode` | `auto`, `compact`, `medium`, or `large` |
+| `library.largeLibraryThreshold` | Default: 30 games |
+| `library.compactMaxGames` | Default: 9 games |
+| `library.sidebarPosition` | `left` or `right` |
 | `appId` | Unique reverse-domain application ID for your fork |
 | `updateRepository` | Your own GitHub repository in `owner/repo` form; set to an empty string to disable self-updates |
 | `catalogFile` | JSON game catalog file, normally `catalog.json` |
