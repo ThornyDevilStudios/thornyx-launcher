@@ -25,7 +25,12 @@ function applyBranding() {
   $("hero-tagline").textContent = branding.tagline || "Deine Spiele. Dein Abenteuer.";
   $("hero-description").textContent = branding.description || "Installieren, aktuell halten und direkt losspielen.";
   $("itch-link").textContent = (branding.shortName || name) + " Website ↗";
-  $("itch-link").href = branding.website || "https://github.com";
+  $("itch-link").href = "#";
+  $("itch-link").onclick = event => {
+    event.preventDefault();
+    const website = branding.website;
+    if (website) window.launcher.openExternal(website);
+  };
   $("version").textContent = name.toUpperCase() + " · " + (launcherConfig.version || "");
   const accent = branding.accentColor || "#c5f36b";
   const background = branding.backgroundColor || "#0b0d12";
