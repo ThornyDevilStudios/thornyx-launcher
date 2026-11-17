@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld("launcher", {
   openLogs: () => ipcRenderer.invoke("diagnostics:open-logs"),
   chooseInstallDirectory: () => ipcRenderer.invoke("settings:choose-install-directory"),
   repairGame: id => ipcRenderer.invoke("game:repair", id),
+  verifyGame: id => ipcRenderer.invoke("game:verify", id),
   openGameFolder: id => ipcRenderer.invoke("game:open-folder", id),
   downloadLauncherUpdate: () => ipcRenderer.invoke("launcher:update-download"),
   installLauncherUpdate: () => ipcRenderer.invoke("launcher:update-install"),
