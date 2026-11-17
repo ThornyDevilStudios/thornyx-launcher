@@ -15,7 +15,7 @@ function safeHttpUrl(value) {
 }
 
 function resolveInside(root, relativePath) {
-  if (typeof relativePath !== "string" || !relativePath.trim() || path.isAbsolute(relativePath)) {
+  if (typeof relativePath !== "string" || !relativePath.trim() || (path.isAbsolute(relativePath) || /^[A-Za-z]:[\\/]/.test(relativePath) || /^\\\\/.test(relativePath))) {
     throw new Error("Der Pfad muss relativ zum Zielordner sein.");
   }
   const segments = relativePath.split(/[\\/]/);
