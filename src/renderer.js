@@ -4,6 +4,21 @@ const prefs = () => { try { return JSON.parse(localStorage.getItem("thornyx-pref
 function savePrefs(value) { localStorage.setItem("thornyx-preferences", JSON.stringify(value)); }
 function esc(value="") { return String(value).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 function formatSize(n) { return !n ? "" : n > 1024**3 ? (n/1024**3).toFixed(1)+" GB" : Math.round(n/1024**2)+" MB"; }
+const languageText = {
+  de: { "nav-library":"Startseite", "nav-installed":"Installiert", "nav-all":"Alle Spiele", "nav-add":"Spiel hinzufügen", "nav-refresh":"Nach Updates suchen", "nav-downloads":"Downloads", "nav-settings":"Einstellungen", "nav-about":"Über diesen Launcher", "search":"Spiel, Genre oder Entwickler suchen …", "settings-title":"Launcher-Einstellungen", "save-settings":"Einstellungen speichern", "mods-add":"ZIP-Mod installieren", "downloads-title":"Downloads", "add-title":"Spiel hinzufügen" },
+  en: { "nav-library":"Home", "nav-installed":"Installed", "nav-all":"All games", "nav-add":"Add game", "nav-refresh":"Check for updates", "nav-downloads":"Downloads", "nav-settings":"Settings", "nav-about":"About this launcher", "search":"Search game, genre or developer …", "settings-title":"Launcher settings", "save-settings":"Save settings", "mods-add":"Install ZIP mod", "downloads-title":"Downloads", "add-title":"Add a game" }
+};
+function applyLanguage() {
+  const lang=prefs().language==="en"?"en":"de", dict=languageText[lang];
+  for(const id of ["nav-library","nav-installed","nav-all","nav-add","nav-refresh","nav-downloads","nav-settings","nav-about"]){const el=$(id);if(el){const span=el.querySelector("span");if(span)span.textContent=dict[id];}}
+  $("search").placeholder=dict.search;
+  $("settings-title").textContent=dict["settings-title"];
+  $("save-settings").textContent=dict["save-settings"];
+  $("mods-add").textContent=dict["mods-add"];
+  $("downloads-title").textContent=dict["downloads-title"];
+  $("add-title").textContent=dict["add-title"];
+  $("setting-language").value=lang;
+}
 function applyTheme() {
   const b = launcherConfig.branding || {}, p = prefs();
   const vals = {accent:p.accent||b.accentColor||"#c5f36b", background:p.background||b.backgroundColor||"#0b0d12", panel:p.panel||b.panelColor||"#121620", text:p.text||b.textColor||"#f1f3f7"};
@@ -139,10 +154,10 @@ $("nav-library").onclick=()=>{view="all";$("search").value="";render();};
 $("nav-all").onclick=()=>setView("all");$("nav-installed").onclick=()=>setView("installed");
 $("nav-refresh").onclick=$("refresh-top").onclick=refresh;
 $("nav-add").onclick=()=>$("add-modal").classList.remove("hidden");
-$("nav-settings").onclick=async()=>{$("setting-layout").value=prefs().layout||"auto";$("setting-view").value=displayMode;$("setting-accent").value=prefs().accent||launcherConfig.branding.accentColor||"#c5f36b";$("setting-background").value=prefs().background||launcherConfig.branding.backgroundColor||"#0b0d12";$("setting-panel").value=prefs().panel||launcherConfig.branding.panelColor||"#121620";$("setting-text").value=prefs().text||launcherConfig.branding.textColor||"#f1f3f7";$("setting-threshold").value=prefs().threshold||launcherConfig.library.largeLibraryThreshold||30;const s=await window.launcher.getSettings();$("setting-install-directory").value=s.installDirectory;$("setting-notifications").checked=s.notifications!==false;$("setting-autostart").checked=Boolean(s.autoStart);$("setting-maximized").checked=Boolean(s.startMaximized);$("settings-modal").classList.remove("hidden");};
+$("nav-settings").onclick=async()=>{$("setting-layout").value=prefs().layout||"auto";$("setting-view").value=displayMode;$("setting-accent").value=prefs().accent||launcherConfig.branding.accentColor||"#c5f36b";$("setting-background").value=prefs().background||launcherConfig.branding.backgroundColor||"#0b0d12";$("setting-panel").value=prefs().panel||launcherConfig.branding.panelColor||"#121620";$("setting-text").value=prefs().text||launcherConfig.branding.textColor||"#f1f3f7";$("setting-threshold").value=prefs().threshold||launcherConfig.library.largeLibraryThreshold||30;const s=await window.launcher.getSettings();$("setting-install-directory").value=s.installDirectory;$("setting-language").value=prefs().language||"de";$("setting-notifications").checked=s.notifications!==false;$("setting-autostart").checked=Boolean(s.autoStart);$("setting-maximized").checked=Boolean(s.startMaximized);$("settings-modal").classList.remove("hidden");};
 $("choose-install-directory").onclick=async()=>{const s=await window.launcher.chooseInstallDirectory();$("setting-install-directory").value=s.installDirectory;};
 $("open-logs").onclick=()=>window.launcher.openLogs();
-$("save-settings").onclick=async()=>{savePrefs({layout:$("setting-layout").value,view:$("setting-view").value,accent:$("setting-accent").value,background:$("setting-background").value,panel:$("setting-panel").value,text:$("setting-text").value,threshold:Number($("setting-threshold").value)});await window.launcher.saveSettings({notifications:$("setting-notifications").checked,autoStart:$("setting-autostart").checked,startMaximized:$("setting-maximized").checked});displayMode=$("setting-view").value;applyTheme();$("settings-modal").classList.add("hidden");render();};
+$("save-settings").onclick=async()=>{savePrefs({layout:$("setting-layout").value,view:$("setting-view").value,accent:$("setting-accent").value,background:$("setting-background").value,panel:$("setting-panel").value,text:$("setting-text").value,threshold:Number($("setting-threshold").value),language:$("setting-language").value});applyLanguage();await window.launcher.saveSettings({notifications:$("setting-notifications").checked,autoStart:$("setting-autostart").checked,startMaximized:$("setting-maximized").checked});displayMode=$("setting-view").value;applyTheme();$("settings-modal").classList.add("hidden");render();};
 $("view-grid").onclick=()=>{displayMode="grid";render();};$("view-list").onclick=()=>{displayMode="list";render();};
 $("nav-about").onclick=()=>$("about-modal").classList.remove("hidden");
 $("close-modal").onclick=()=>$("add-modal").classList.add("hidden");$("close-about").onclick=()=>$("about-modal").classList.add("hidden");$("close-settings").onclick=()=>$("settings-modal").classList.add("hidden");
@@ -157,4 +172,4 @@ window.launcher.onProgress(d=>{$("status").textContent="Download: "+(d.total?d.p
 window.launcher.onQueue(d=>{downloadQueue=d.queue||[];pausedDownloadIds=new Set(d.paused||[]);renderDownloads();});
 window.launcher.onStatus(d=>$("status").textContent=d.message);
 window.launcher.onLauncherUpdate(async d=>{if(confirm("Eine neue Launcher-Version ("+d.version+") ist verfügbar. Jetzt herunterladen?")){try{await window.launcher.downloadLauncherUpdate();if(confirm("Update heruntergeladen. Launcher jetzt neu starten?"))window.launcher.installLauncherUpdate();}catch(e){alert(e.message);}}});
-(async()=>{try{launcherConfig=await window.launcher.getConfig();const p=prefs();displayMode=p.view||launcherConfig.library?.mediumView||"grid";applyBranding();await refresh();}catch(e){$("status").textContent="Konfiguration: "+e.message;}})();
+(async()=>{try{launcherConfig=await window.launcher.getConfig();const p=prefs();displayMode=p.view||launcherConfig.library?.mediumView||"grid";applyBranding();applyLanguage();await refresh();}catch(e){$("status").textContent="Konfiguration: "+e.message;}})();
