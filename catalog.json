@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "studio": {
+    "name": "ThornyDevil Studios",
+    "website": "https://thornydevilstudios.itch.io/"
+  },
+  "games": [
+    {
+      "id": "noob-night-shift",
+      "name": "Noob Night Shift",
+      "developer": "ThornyDevil Studios",
+      "repository": "ThornyDevilStudios/noob-night-shift",
+      "channel": "stable",
+      "assetPattern": "Noob_Shift.zip",
+      "executable": "Noob_Shift.exe",
+      "description": "Survive the night shift. Check the latest release for details.",
+      "itchUrl": "https://thornydevilstudios.itch.io/",
+      "mods": true,
+      "platform": "windows"
+    },
+    {
+      "id": "cherno-paw",
+      "name": "Cherno Paw",
+      "developer": "ThornyDevil Studios",
+      "repository": "ThornyDevilStudios/chernow_paw",
+      "channel": "stable",
+      "assetPattern": "Cherno_Paw.zip",
+      "executable": "Cherno_Paw.exe",
+      "description": "Explore Cherno Paw. Check the latest release for details.",
+      "itchUrl": "https://thornydevilstudios.itch.io/",
+      "mods": false,
+      "platform": "windows"
+    },
+    {
+      "id": "finn-vs-the-evil-broccoli",
+      "name": "Finn Vs The Evil Broccoli",
+      "developer": "ThornyDevil Studios",
+      "repository": "ThornyDevilStudios/finn-vs-the-evil-broccoli",
+      "channel": "stable",
+      "assetPattern": "Pulse_GameJam_2025.zip",
+      "executable": "Pulse_GameJam_2025.exe",
+      "description": "A game jam adventure. Check the latest release for details.",
+      "itchUrl": "https://thornydevilstudios.itch.io/",
+      "mods": false,
+      "platform": "windows"
+    }
+  ]
+}
