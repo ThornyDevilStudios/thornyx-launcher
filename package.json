@@ -5,32 +5,17 @@
   "main": "src/main.js",
   "author": "ThornyDevil Studios",
   "license": "MIT",
-  "scripts": {
-    "start": "electron .",
-    "dist": "electron-builder --win nsis",
-    "test": "node --test"
-  },
-  "dependencies": {
-    "electron-updater": "^6.6.2",
-    "extract-zip": "^2.0.1"
-  },
-  "devDependencies": {
-    "electron": "^34.3.0",
-    "electron-builder": "^26.0.12"
-  },
+  "scripts": { "start": "electron .", "dist": "electron-builder --win nsis", "test": "node --test" },
+  "dependencies": { "electron-updater": "^6.6.2", "extract-zip": "^2.0.1" },
+  "devDependencies": { "electron": "^34.3.0", "electron-builder": "^26.0.12" },
   "build": {
     "appId": "studio.thornydevil.thornyxlauncher",
     "productName": "Thornyx Launcher",
     "directories": { "output": "dist" },
     "files": ["src/**/*", "package.json"],
     "extraResources": [{ "from": "catalog.json", "to": "catalog.json" }],
-    "win": { "target": ["nsis"], "icon": "assets/icon.ico" },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
-    },
+    "win": { "target": ["nsis"] },
+    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true, "createDesktopShortcut": true, "createStartMenuShortcut": true },
     "publish": [{ "provider": "github", "owner": "ThornyDevilStudios", "repo": "thornyx-launcher" }]
   }
 }
