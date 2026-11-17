@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell } = require("electron");
+const { app, BrowserWindow, ipcMain, shell, dialog } = require("electron");
 const path = require("node:path");
 const fs = require("node:fs");
 const fsp = require("node:fs/promises");
@@ -15,10 +15,13 @@ let catalog = { games: [], studio: { name: "Indie Games" } };
 function resourceFile(name) {
   return app.isPackaged ? path.join(process.resourcesPath, name) : path.join(__dirname, "..", name);
 }
+function settingsPath() { return path.join(app.getPath("userData"), "settings.json"); }
+function readSettings() { try { return JSON.parse(fs.readFileSync(settingsPath(), "utf8")); } catch { return {}; } }
+function writeSettings(value) { fs.mkdirSync(app.getPath("userData"), { recursive: true }); fs.writeFileSync(settingsPath(), JSON.stringify(value, null, 2)); }
 function userFiles() {
-  const root = path.join(app.getPath("userData"), "games");
-  fs.mkdirSync(root, { recursive: true });
-  return root;
+  const configured = readSettings().installDirectory;
+  const root = configured && path.isAbsolute(configured) ? configured : path.join(app.getPath("userData"), "games");
+  fs.mkdirSync(root, { recursive: true }); return root;
 }
 function installedPath(game) { return path.join(userFiles(), game.id); }
 function customCatalogPath() { return path.join(app.getPath("userData"), "custom-games.json"); }
@@ -232,9 +235,22 @@ function resolveExecutable(game) {
 }
 function registerIpc() {
   ipcMain.handle("config:get", () => publicConfig());
+  ipcMain.handle("settings:get", () => ({ installDirectory: userFiles() }));
+  ipcMain.handle("settings:choose-install-directory", async () => {
+    const result = await dialog.showOpenDialog(win, { title: "Spielinstallationsordner auswählen", properties: ["openDirectory", "createDirectory"] });
+    if (result.canceled || !result.filePaths[0]) return { canceled: true, installDirectory: userFiles() };
+    const chosen = path.resolve(result.filePaths[0]); writeSettings({ ...readSettings(), installDirectory: chosen });
+    fs.mkdirSync(chosen, { recursive: true }); return { canceled: false, installDirectory: chosen };
+  });
   ipcMain.handle("catalog:get", getCatalogView);
   ipcMain.handle("updates:check", getCatalogView);
   ipcMain.handle("game:install", async (_event, id) => installGame(id));
+  ipcMain.handle("game:repair", async (_event, id) => installGame(id));
+  ipcMain.handle("game:open-folder", async (_event, id) => {
+    const game = catalog.games.find(g => g.id === id);
+    if (!game || !fs.existsSync(installedPath(game))) throw new Error("Spielordner nicht gefunden.");
+    const error = await shell.openPath(installedPath(game)); if (error) throw new Error(error); return { success: true };
+  });
   ipcMain.handle("game:launch", async (_event, id) => {
     const game = catalog.games.find(g => g.id === id);
     if (!game || !fs.existsSync(installedPath(game))) throw new Error("Installiere das Spiel zuerst.");
@@ -302,10 +318,13 @@ app.whenReady().then(async () => {
   registerIpc();
   createWindow();
   if (app.isPackaged && launcherConfig.updateRepository) {
+    autoUpdater.autoDownload = false;
+    autoUpdater.on("update-available", info => send("launcher:update-available", { version: info.version }));
+    autoUpdater.on("update-not-available", () => send("app:status", { message: "Launcher ist aktuell." }));
     autoUpdater.on("error", error => send("app:status", { message: "Launcher-Update fehlgeschlagen: " + error.message }));
-    setTimeout(() => autoUpdater.checkForUpdatesAndNotify().catch(error => {
-      send("app:status", { message: "Update-Prüfung nicht möglich: " + error.message });
-    }), 8000);
+    ipcMain.handle("launcher:update-download", async () => { await autoUpdater.downloadUpdate(); return { success: true }; });
+    ipcMain.handle("launcher:update-install", () => { autoUpdater.quitAndInstall(); return { success: true }; });
+    setTimeout(() => autoUpdater.checkForUpdates().catch(error => send("app:status", { message: "Update-Prüfung nicht möglich: " + error.message })), 8000);
   }
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
