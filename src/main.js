@@ -341,17 +341,18 @@ function registerIpc() {
     const relative = path.relative(previous, chosen);
     if (relative && !relative.startsWith("..") && !path.isAbsolute(relative)) throw new Error("Der neue Installationsordner darf nicht innerhalb des bisherigen Spieleordners liegen.");
     fs.mkdirSync(chosen, { recursive: true });
+    const migrated = [];
     for (const entry of await fsp.readdir(previous, { withFileTypes: true })) {
       if (!entry.isDirectory() || entry.name.startsWith(".tmp-") || entry.name.endsWith(".old")) continue;
       const source = path.join(previous, entry.name);
       if (!fs.existsSync(path.join(source, ".thornyx-install.json"))) continue;
       const destination = path.join(chosen, entry.name);
-      if (!fs.existsSync(destination)) {
-        await fsp.cp(source, destination, { recursive: true, errorOnExist: true });
-        await fsp.rm(source, { recursive: true, force: true });
-      }
+      if (fs.existsSync(destination)) throw new Error("Der Zielordner enthält bereits einen Ordner für „" + entry.name + "“. Bitte wähle einen leeren Ordner.");
+      await fsp.cp(source, destination, { recursive: true, errorOnExist: true });
+      migrated.push(source);
     }
     writeSettings({ ...readSettings(), installDirectory: chosen });
+    for (const source of migrated) await fsp.rm(source, { recursive: true, force: true });
     return { canceled: false, installDirectory: chosen };
   });
   ipcMain.handle("catalog:get", getCatalogView);
