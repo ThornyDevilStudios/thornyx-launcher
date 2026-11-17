@@ -295,6 +295,38 @@ function registerIpc() {
     child.unref();
     return { success: true };
   });
+  ipcMain.handle("mods:list", async (_event, id) => {
+    const game = catalog.games.find(g => g.id === id);
+    if (!game || !game.mods || !fs.existsSync(installedPath(game))) throw new Error("Mods sind für dieses Spiel nicht verfügbar.");
+    const root = path.join(installedPath(game), "Mods");
+    await fsp.mkdir(root, { recursive: true });
+    return (await fsp.readdir(root, { withFileTypes: true })).filter(item => item.isDirectory()).map(item => ({ id: item.name, name: item.name }));
+  });
+  ipcMain.handle("mods:install", async (_event, id) => {
+    const game = catalog.games.find(g => g.id === id);
+    if (!game || !game.mods || !fs.existsSync(installedPath(game))) throw new Error("Mods sind für dieses Spiel nicht verfügbar.");
+    const picked = await dialog.showOpenDialog(win, { title: "Mod-ZIP auswählen", properties: ["openFile"], filters: [{ name: "ZIP-Mods", extensions: ["zip"] }] });
+    if (picked.canceled || !picked.filePaths[0]) return { canceled: true };
+    const root = path.join(installedPath(game), "Mods");
+    await fsp.mkdir(root, { recursive: true });
+    const base = path.basename(picked.filePaths[0], path.extname(picked.filePaths[0])).toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 48) || "mod";
+    let modId = "mod-" + base, suffix = 2;
+    while (fs.existsSync(path.join(root, modId))) modId = "mod-" + base + "-" + suffix++;
+    const destination = path.join(root, modId);
+    await fsp.mkdir(destination, { recursive: true });
+    try { await extract(picked.filePaths[0], { dir: destination }); }
+    catch (error) { await fsp.rm(destination, { recursive: true, force: true }); throw error; }
+    return { success: true, id: modId };
+  });
+  ipcMain.handle("mods:remove", async (_event, id, modId) => {
+    const game = catalog.games.find(g => g.id === id);
+    if (!game || !game.mods || !safeId(modId) || !fs.existsSync(installedPath(game))) throw new Error("Ungültiger Mod-Eintrag.");
+    const root = path.resolve(installedPath(game), "Mods");
+    const target = path.resolve(root, modId);
+    if (!target.startsWith(root + path.sep)) throw new Error("Ungültiger Mod-Pfad.");
+    await fsp.rm(target, { recursive: true, force: true });
+    return { success: true };
+  });
   ipcMain.handle("game:mods", async (_event, id) => {
     const game = catalog.games.find(g => g.id === id);
     if (!game || !game.mods) throw new Error("Für dieses Spiel ist kein Mod-Ordner aktiviert.");
