@@ -146,14 +146,16 @@ function releaseInfo(game, releases) {
   const latest = releases[0];
   const pattern = releaseAssetPattern(game);
   const asset = latest?.assets?.find(a => a.name.toLowerCase().includes(pattern.toLowerCase()));
+  const supportedPlatform = game.platform === "auto" || game.platform === platformKey() || Boolean(game.platformAssets?.[platformKey()] && game.platformExecutables?.[platformKey()]);
   return {
     version: latest?.tag_name || "—",
     name: latest?.name || latest?.tag_name || "Noch kein Release",
     body: latest?.body || "Für dieses Release gibt es keine Release-Notes.",
     publishedAt: latest?.published_at || null,
     htmlUrl: latest?.html_url || "",
-    assetName: asset?.name || "",
-    assetUrl: asset?.browser_download_url || "",
+    supportedPlatform,
+    assetName: supportedPlatform ? (asset?.name || "") : "",
+    assetUrl: supportedPlatform ? (asset?.browser_download_url || "") : "",
     assetSize: asset?.size || 0,
     installed: fs.existsSync(installedPath(game)),
     installedVersion: readInstalledVersion(game.id)
@@ -169,6 +171,7 @@ async function getCatalogView() {
         ...game,
         installed: fs.existsSync(installedPath(game)),
         installedVersion: readInstalledVersion(game.id),
+        supportedPlatform: game.platform === "auto" || game.platform === platformKey() || Boolean(game.platformAssets?.[platformKey()] && game.platformExecutables?.[platformKey()]),
         error: error.message
       };
     }
