@@ -207,7 +207,7 @@ async function getCatalogView() {
     }
   }));
 }
-async function download(url, destination, gameId, expectedSize = 0) {
+async function download(url, destination, gameId, expectedSize = 0, expectedDigest = "") {
   let offset = 0;
   try { offset = (await fsp.stat(destination)).size; } catch {}
   if (expectedSize && offset >= expectedSize) return { success: true };
@@ -237,6 +237,12 @@ async function download(url, destination, gameId, expectedSize = 0) {
     await pipeline(Readable.fromWeb(response.body), progress, fs.createWriteStream(destination, { flags: offset ? "a" : "w" }), { signal: controller.signal });
     const finalSize = (await fsp.stat(destination)).size;
     if (expectedSize && finalSize !== expectedSize) throw new Error("Download unvollständig: " + finalSize + " von " + expectedSize + " Bytes.");
+    const expectedHash = String(expectedDigest || "").replace(/^sha256:/i, "").toLowerCase();
+    if (/^[a-f0-9]{64}$/.test(expectedHash)) {
+      const hash = crypto.createHash("sha256");
+      for await (const chunk of fs.createReadStream(destination)) hash.update(chunk);
+      if (hash.digest("hex").toLowerCase() !== expectedHash) throw new Error("SHA-256-Prüfung des Downloads fehlgeschlagen.");
+    }
     return { success: true };
   } catch (error) {
     if (pausedDownloads.has(gameId)) return { paused: true };
@@ -270,7 +276,7 @@ async function installGame(id) {
   await fsp.mkdir(temp, { recursive: true });
   try {
     send("app:status", { message: `Lade ${game.name} herunter …` });
-    const downloadResult = await download(asset.browser_download_url, archive, id, Number(asset.size || 0));
+    const downloadResult = await download(asset.browser_download_url, archive, id, Number(asset.size || 0), asset.digest || "");
     if (downloadResult.paused) { keepArchive = true; await fsp.rm(temp, { recursive: true, force: true }); return { success: false, paused: true }; }
     if (downloadResult.cancelled) { await fsp.rm(temp, { recursive: true, force: true }); return { success: false, cancelled: true }; }
     if (asset.name.toLowerCase().endsWith(".zip")) {
