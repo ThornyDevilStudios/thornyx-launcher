@@ -15,7 +15,8 @@ function safeHttpUrl(value) {
 }
 
 function resolveInside(root, relativePath) {
-  if (typeof relativePath !== "string" || !relativePath.trim() || (path.isAbsolute(relativePath) || /^[A-Za-z]:[\\/]/.test(relativePath) || /^\\\\/.test(relativePath))) {
+  if (typeof relativePath !== "string" || !relativePath.trim() ||
+      path.isAbsolute(relativePath) || /^[A-Za-z]:[\\/]/.test(relativePath) || /^\\\\/.test(relativePath)) {
     throw new Error("Der Pfad muss relativ zum Zielordner sein.");
   }
   const segments = relativePath.split(/[\\/]/);
@@ -38,7 +39,10 @@ function validateGame(game) {
   const platformExecutables = Object.fromEntries(
     ["windows", "linux", "macos"]
       .filter(key => typeof game.platformExecutables?.[key] === "string" && game.platformExecutables[key])
-      .map(key => {\n        resolveInside("/thornyx-validation-root", game.platformExecutables[key]);\n        return [key, game.platformExecutables[key].slice(0, 240)];\n      })
+      .map(key => {
+        resolveInside("/thornyx-validation-root", game.platformExecutables[key]);
+        return [key, game.platformExecutables[key].slice(0, 240)];
+      })
   );
   return {
     id: game.id,
