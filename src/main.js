@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell, dialog } = require("electron");
+const { app, BrowserWindow, ipcMain, shell, dialog, Notification } = require("electron");
 const path = require("node:path");
 const fs = require("node:fs");
 const fsp = require("node:fs/promises");
@@ -34,6 +34,13 @@ function cancelGameDownload(id) { cancelledDownloads.add(id); pausedDownloads.de
 
 function resourceFile(name) {
   return app.isPackaged ? path.join(process.resourcesPath, name) : path.join(__dirname, "..", name);
+}
+function logFilePath() { return path.join(app.getPath("userData"), "logs", "launcher.log"); }
+function writeLog(level, message) {
+  try { fs.mkdirSync(path.dirname(logFilePath()), { recursive: true }); fs.appendFileSync(logFilePath(), "[" + new Date().toISOString() + "] [" + level + "] " + String(message) + "\n"); } catch {}
+}
+function notifyUser(title, body) {
+  if (readSettings().notifications !== false && Notification.isSupported()) new Notification({ title, body }).show();
 }
 function settingsPath() { return path.join(app.getPath("userData"), "settings.json"); }
 function readSettings() { try { return JSON.parse(fs.readFileSync(settingsPath(), "utf8")); } catch { return {}; } }
@@ -276,9 +283,11 @@ async function installGame(id) {
       throw error;
     }
     await fsp.rm(backup, { recursive: true, force: true });
+    writeLog("INFO", "Spiel installiert: " + game.name + " (" + latest.tag_name + ")"); notifyUser("Installation abgeschlossen", game.name + " ist jetzt spielbereit.");
     return { success: true, version: latest.tag_name };
   } catch (error) {
     await fsp.rm(temp, { recursive: true, force: true });
+    writeLog("ERROR", "Installation fehlgeschlagen (" + id + "): " + error.stack);
     if (pausedDownloads.has(id)) { keepArchive = true; return { success: false, paused: true }; }
     if (cancelledDownloads.has(id)) return { success: false, cancelled: true };
     throw error;
@@ -307,7 +316,15 @@ function resolveExecutable(game) {
 }
 function registerIpc() {
   ipcMain.handle("config:get", () => publicConfig());
-  ipcMain.handle("settings:get", () => ({ installDirectory: userFiles() }));
+  ipcMain.handle("settings:get", () => ({ ...readSettings(), installDirectory: userFiles() }));
+  ipcMain.handle("settings:save", (_event, values) => {
+    const next = { ...readSettings(), notifications: values?.notifications !== false, startMaximized: Boolean(values?.startMaximized), autoStart: Boolean(values?.autoStart) };
+    writeSettings(next);
+    if (process.platform === "win32" || process.platform === "darwin") app.setLoginItemSettings({ openAtLogin: next.autoStart });
+    if (win && !win.isDestroyed()) { if (next.startMaximized) win.maximize(); else win.unmaximize(); }
+    return { success: true, ...next };
+  });
+  ipcMain.handle("diagnostics:open-logs", async () => { writeLog("INFO", "Logordner geöffnet"); const error = await shell.openPath(path.dirname(logFilePath())); if (error) throw new Error(error); return { success: true }; });
   ipcMain.handle("settings:choose-install-directory", async () => {
     const result = await dialog.showOpenDialog(win, { title: "Spielinstallationsordner auswählen", properties: ["openDirectory", "createDirectory"] });
     if (result.canceled || !result.filePaths[0]) return { canceled: true, installDirectory: userFiles() };
@@ -337,6 +354,7 @@ function registerIpc() {
       return { success: true };
     }
     if (process.platform !== "win32") await fsp.chmod(exe, 0o755).catch(() => {});
+    writeLog("INFO", "Spiel gestartet: " + game.name);
     const child = spawn(exe, [], { cwd: path.dirname(exe), detached: true, stdio: "ignore" });
     child.unref();
     return { success: true };
@@ -419,7 +437,10 @@ function createWindow() {
     }
   });
   win.loadFile(path.join(__dirname, "index.html"));
+  if (readSettings().startMaximized) win.maximize();
 }
+process.on("uncaughtException", error => writeLog("FATAL", error.stack || error.message));
+process.on("unhandledRejection", error => writeLog("ERROR", error?.stack || String(error)));
 app.whenReady().then(async () => {
   await loadConfiguration();
   registerIpc();
