@@ -30,7 +30,7 @@ function resolveInside(root, relativePath) {
 
 function validateGame(game) {
   if (!game || !safeId(game.id) || typeof game.name !== "string" || !game.name.trim() ||
-      !/^[A-Za-z0-9_.-]+\\/[A-Za-z0-9_.-]+$/.test(game.repository || "")) {
+      !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(game.repository || "")) {
     throw new Error("Ungültiger Spieleintrag. Benötigt werden ID, Name und GitHub-Repository (owner/repo).");
   }
   const executable = String(game.executable || "");
