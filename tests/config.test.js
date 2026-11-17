@@ -35,3 +35,10 @@ test("original creator attribution remains separate from editable branding", () 
   assert.match(license, /Mandatory attribution/);
   assert.match(license, /Based on Thornyx Launcher, originally created by ThornyDevil Studios\./);
 });
+
+test("adaptive library defaults preserve the agreed layout thresholds", () => {
+  assert.equal(config.library.layoutMode, "auto");
+  assert.equal(config.library.largeLibraryThreshold, 30);
+  assert.equal(config.library.compactMaxGames, 9);
+  assert.equal(config.library.mediumMaxGames, 29);
+});
