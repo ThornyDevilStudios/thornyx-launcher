@@ -7,7 +7,7 @@ function formatSize(n) { return !n ? "" : n > 1024**3 ? (n/1024**3).toFixed(1)+"
 function applyTheme() {
   const b = launcherConfig.branding || {}, p = prefs();
   const vals = {accent:p.accent||b.accentColor||"#c5f36b", background:p.background||b.backgroundColor||"#0b0d12", panel:p.panel||b.panelColor||"#121620", text:p.text||b.textColor||"#f1f3f7"};
-  for (const [k,v] of Object.entries(vals)) if (/^#[0-9a-f]{6}$/i.test(v)) document.documentElement.style.setProperty("--"+k,v);
+  const vars={accent:"--accent",background:"--bg",panel:"--panel",text:"--text"}; for (const [k,v] of Object.entries(vals)) if (/^#[0-9a-f]{6}$/i.test(v)) document.documentElement.style.setProperty(vars[k],v);
 }
 function applyBranding() {
   const b=launcherConfig.branding||{}, name=b.name||"Thornyx Launcher", short=b.shortName||name.toUpperCase();
@@ -84,7 +84,7 @@ async function refresh() {
 async function perform(id,action) {
   if(busy.has(id))return;const g=games.find(x=>x.id===id);if(!g)return;
   try {
-    if(action==="main"){if(g.installed&&!g.updateAvailable)await window.launcher.launchGame(id);else{busy.add(id);render();await window.launcher.installGame(id);await refresh();}}
+    if(action==="main"){if(g.installed&&!g.updateAvailable)await window.launcher.launchGame(id);else{if(g.installed&&g.updateAvailable&&!confirm("Update für "+g.name+" jetzt installieren?"))return;busy.add(id);render();await window.launcher.installGame(id);await refresh();}}
     else if(action==="uninstall"){if(confirm(g.name+" wirklich deinstallieren?")){await window.launcher.uninstallGame(id);await refresh();}}
     else if(action==="mods")await window.launcher.openMods(id);
     else if(action==="notes"&&g.htmlUrl)await window.launcher.openExternal(g.htmlUrl);
@@ -92,7 +92,25 @@ async function perform(id,action) {
   }catch(e){$("status").textContent=e.message;alert(e.message);}finally{busy.delete(id);render();}
 }
 $("games").addEventListener("click",e=>{const b=e.target.closest("[data-action]");if(b)perform(b.dataset.id,b.dataset.action);});
-document.addEventListener("click",e=>{const b=e.target.closest("[data-open]");if(b){const g=games.find(x=>x.id===b.dataset.open);if(g){view=g.installed?"installed":"all";$("search").value=g.name;render();$("page-title").textContent=g.name;}}});
+
+function openGameDetail(id) {
+  const g=games.find(x=>x.id===id); if(!g)return;
+  const art=g.heroImage||g.cover;
+  $("detail-art").style.backgroundImage=art ? "linear-gradient(0deg,#090c12 0%,#090c1255 65%,transparent 100%),url("+JSON.stringify(art)+")" : "";
+  $("detail-title").textContent=g.name;
+  $("detail-meta").textContent=[g.developer,g.genre,g.version].filter(Boolean).join(" · ");
+  $("detail-description").textContent=g.description||"Für dieses Spiel liegt noch keine Beschreibung vor.";
+  $("detail-notes").textContent=g.body||"Keine Release-Notizen verfügbar.";
+  $("detail-status").textContent=g.installed?(g.updateAvailable?"Update verfügbar":"Installiert · "+(g.installedVersion||"Version unbekannt")):"Noch nicht installiert";
+  $("detail-actions").innerHTML='<button class="primary" data-action="main" data-id="'+esc(g.id)+'">'+(g.installed?(g.updateAvailable?"Update installieren":"Spielen"):"Installieren")+'</button>'+(g.installed?'<button class="secondary" data-action="uninstall" data-id="'+esc(g.id)+'">Deinstallieren</button>':"")+(g.mods&&g.installed?'<button class="secondary" data-action="mods" data-id="'+esc(g.id)+'">Mods-Ordner</button>':"")+(g.htmlUrl?'<button class="secondary" data-action="notes" data-id="'+esc(g.id)+'">Release auf GitHub</button>':"");
+  $("detail-modal").classList.remove("hidden");
+}
+document.addEventListener("click",e=>{
+  const open=e.target.closest("[data-open]"); if(open)openGameDetail(open.dataset.open);
+  if(e.target.id==="close-detail"||e.target.id==="detail-modal")$("detail-modal").classList.add("hidden");
+});
+$("detail-actions").addEventListener("click",e=>{const b=e.target.closest("[data-action]");if(b)perform(b.dataset.id,b.dataset.action).then(()=>{const g=games.find(x=>x.id===b.dataset.id);if(g)openGameDetail(g.id);});});
+
 ["search","genre-filter","developer-filter","sort-select"].forEach(id=>$(id).addEventListener(id==="search"?"input":"change",render));
 function setView(v){view=v;render();}
 $("nav-library").onclick=()=>{view="all";$("search").value="";render();};
