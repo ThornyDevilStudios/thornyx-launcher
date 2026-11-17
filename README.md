@@ -10,6 +10,11 @@ A customizable cross-platform desktop game launcher built with Electron. The ori
 - Installs ZIP builds, remembers the installed release tag and detects newer versions.
 - Downloads and installs updates without requiring users to reinstall the launcher.
 - Starts the configured game executable and supports optional Mods folders.
+- Provides a queued download manager with progress, pause, resume and cancel controls; interrupted downloads resume with HTTP range requests when the server supports them.
+- Provides game detail pages, screenshot galleries, repair/reinstall, and per-game install folder access.
+- Includes a local ZIP mod manager, configurable install directory, desktop notifications, startup preferences and diagnostic logs.
+- Detects local cover/banner images and relative image paths in game metadata manifests.
+- Supports per-platform release asset patterns and executable paths.
 - Lets users add public GitHub release repositories from the launcher UI.
 - Supports fork-specific branding, catalog, app ID and launcher update repository.
 - Adaptive library: compact sidebar, medium grid/list, and large discovery dashboard.
